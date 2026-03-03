@@ -35,6 +35,32 @@ body {
   font-family: var(--sans); min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
+
+/* ── LIGHT THEME ─────────────────────────────── */
+:root.light {
+  --bg:       #f4f6fb;
+  --bg2:      #ffffff;
+  --bg3:      #eaf0f9;
+  --border:   #c8d3e6;
+  --text:     #1a2133;
+  --muted:    #6b7a99;
+  --accent:   #1a6fd4;
+  --ok:       #1a9c50;
+  --warn:     #c07800;
+  --fail:     #c0232c;
+  --ok-bg:    rgba(26,156,80,.10);
+  --warn-bg:  rgba(192,120,0,.10);
+  --fail-bg:  rgba(192,35,44,.10);
+}
+.theme-toggle {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text); font-size: .95rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .2s; flex-shrink: 0;
+}
+.theme-toggle:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
 input, select, textarea, button { font-family: inherit; }
 button { cursor: pointer; }
 
@@ -360,6 +386,25 @@ button { cursor: pointer; }
 /* ═══════════════════════════════════════════════
    MISC
 ═══════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════
+   CHARTS IN REPORT
+═══════════════════════════════════════════════ */
+.rpt-chart-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(360px,1fr));
+  gap: 16px; margin-bottom: 24px;
+}
+.rpt-chart-box {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 14px;
+}
+.rpt-chart-title {
+  font-size: .75rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--muted); margin-bottom: 10px;
+}
+@media print {
+  .rpt-chart-grid { grid-template-columns: 1fr 1fr; break-inside: avoid; }
+}
 .empty { text-align: center; padding: 40px; color: var(--muted); }
 .empty .ico { font-size: 2rem; margin-bottom: 10px; }
 .divider { height: 1px; background: var(--border); margin: 16px 0; }
@@ -437,6 +482,7 @@ button { cursor: pointer; }
   .s-fail { color: #a00; }
 }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -456,6 +502,7 @@ button { cursor: pointer; }
     </div>
   </div>
   <div class="breadcrumb" id="breadcrumb"></div>
+  <button class="theme-toggle no-print" id="btn-theme" onclick="toggleTheme()" title="Tema chiaro/scuro">🌙</button>
   <button class="btn btn-ghost btn-sm no-print" onclick="openSettings()" title="Impostazioni soglie">⚙</button>
   <button class="btn btn-ghost btn-sm no-print" id="btn-report" onclick="showReport()" style="display:none">📄 Report</button>
 </header>
@@ -795,6 +842,106 @@ const QC_DEF = {
         { id:'rumore', label:'Rumore (dev std)', unit:'HU', type:'number' },
       ],
     },
+
+    // ── CATPHAN ─────────────────────────────────────────────────────────
+    {
+      id:'catp_hu', tab:'Catphan',
+      title:'Accuratezza Numero TC (HU) – Catphan CTP401',
+      desc:'Misurare HU per ciascun inserto del modulo sensitometria. kV=120, mA=200, coll=10mm.',
+      paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll.')],
+      defaultRows:[
+        {id:'aria',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+        {id:'acqua',  params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+        {id:'ldpe',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+        {id:'poly',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+        {id:'acril',  params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+        {id:'teflon', params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+      ],
+      fields:[
+        { id:'inserto',  label:'Inserto',        unit:'',   type:'text'   },
+        { id:'hu_mis',   label:'HU misurato',    unit:'HU', type:'number' },
+        { id:'hu_rif',   label:'HU riferimento', unit:'HU', type:'number' },
+        { id:'delta_hu', label:'Δ HU',           unit:'HU', type:'number' },
+      ],
+      catphType: 'hu',
+    },
+    {
+      id:'catp_unif', tab:'Catphan',
+      title:'Uniformità Campo TC – Catphan CTP486',
+      desc:'Misurare HU e SD in 5 posizioni (centro + 4 periferie). Diff. centro–periferia ≤ 5 HU.',
+      paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll.')],
+      defaultRows:[
+        {id:'centro', params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+        {id:'ore3',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+        {id:'ore6',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+        {id:'ore9',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+        {id:'ore12',  params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+      ],
+      fields:[
+        { id:'posiz',  label:'Posizione', unit:'',   type:'text'   },
+        { id:'hu_val', label:'HU',        unit:'HU', type:'number' },
+        { id:'sd_val', label:'SD',        unit:'HU', type:'number' },
+      ],
+      catphType: 'unif',
+    },
+    {
+      id:'catp_res', tab:'Catphan',
+      title:'Risoluzione Spaziale ad Alto Contrasto – Catphan CTP528',
+      desc:'LP/cm visive e MTF 50%/10% da line spread function. Multi-kernel.',
+      paramFields:[P('kV','kV'),P('mA','mA'),P('kernel','Kernel')],
+      defaultRows:[
+        {id:'std',    params:[P('kV',120),P('mA',200),P('kernel','Standard')]},
+        {id:'sharp',  params:[P('kV',120),P('mA',200),P('kernel','Sharp/Bone')]},
+        {id:'smooth', params:[P('kV',120),P('mA',200),P('kernel','Smooth')]},
+      ],
+      fields:[
+        { id:'kernel_val', label:'Kernel',       unit:'',       type:'text'   },
+        { id:'lp_vis',     label:'LP/cm visive', unit:'LP/cm',  type:'number' },
+        { id:'mtf50',      label:'MTF 50%',      unit:'LP/cm',  type:'number' },
+        { id:'mtf10',      label:'MTF 10%',      unit:'LP/cm',  type:'number' },
+      ],
+      catphType: 'mtf',
+    },
+    {
+      id:'catp_lc', tab:'Catphan',
+      title:'Risoluzione a Basso Contrasto – Catphan CTP515',
+      desc:'Supra-slice e sub-slice: N° dischi visibili e diametro minimo rilevabile per gruppo.',
+      paramFields:[P('kV','kV'),P('mA','mA'),P('cpc','Contrasto %'),P('kernel','Kernel')],
+      defaultRows:[
+        {id:'sup_10', params:[P('kV',120),P('mA',200),P('cpc',1.0),P('kernel','Standard')]},
+        {id:'sup_06', params:[P('kV',120),P('mA',200),P('cpc',0.6),P('kernel','Standard')]},
+        {id:'sup_03', params:[P('kV',120),P('mA',200),P('cpc',0.3),P('kernel','Standard')]},
+        {id:'sub_10', params:[P('kV',120),P('mA',200),P('cpc',1.0),P('kernel','Standard')]},
+        {id:'sub_06', params:[P('kV',120),P('mA',200),P('cpc',0.6),P('kernel','Standard')]},
+        {id:'sub_03', params:[P('kV',120),P('mA',200),P('cpc',0.3),P('kernel','Standard')]},
+      ],
+      fields:[
+        { id:'gruppo',   label:'Gruppo/tipo',    unit:'',   type:'text'   },
+        { id:'n_visib',  label:'N° dischi vis.', unit:'',   type:'number' },
+        { id:'diam_min', label:'Ø min (mm)',      unit:'mm', type:'number' },
+      ],
+      catphType: 'lc',
+    },
+    {
+      id:'catp_geom', tab:'Catphan',
+      title:'Accuratezza Geometrica & Spessore Strato – Catphan CTP401/404',
+      desc:'5 distanze nominali tra pin (tol. ±1 mm) + spessore strato (tol. ±1 mm o ±50%).',
+      paramFields:[P('kV','kV'),P('mA','mA')],
+      defaultRows:[
+        {id:'d1', params:[P('kV',120),P('mA',200)]},
+        {id:'d2', params:[P('kV',120),P('mA',200)]},
+        {id:'d3', params:[P('kV',120),P('mA',200)]},
+        {id:'d4', params:[P('kV',120),P('mA',200)]},
+        {id:'d5', params:[P('kV',120),P('mA',200)]},
+      ],
+      fields:[
+        { id:'dist_id', label:'Coppia/tipo', unit:'',   type:'text'   },
+        { id:'d_nom',   label:'Nom. (mm)',   unit:'mm', type:'number' },
+        { id:'d_mis',   label:'Mis. (mm)',   unit:'mm', type:'number' },
+        { id:'d_err',   label:'Errore (mm)', unit:'mm', type:'number' },
+      ],
+      catphType: 'geom',
+    },
   ],
 
   costanza: [
@@ -824,6 +971,59 @@ const QC_DEF = {
         { id:'ctdi100_ph',  label:'CTDI₁₀₀ (fantoccio, pH)', unit:'mGy', type:'number', isDeltaA:true },
         { id:'ctdi_vol_tc', label:'CTDIvol TC display',  unit:'mGy', type:'number', isDeltaB:true },
       ],
+    },
+
+    // ── CATPHAN semestrale ────────────────────────────────────────────────
+    {
+      id:'catp_cos_hu', tab:'Catphan',
+      title:'Catphan – HU Linearity (costanza semestrale)',
+      desc:'Acqua, aria, acrilico. kV=120, mA=200, coll=10mm. Confronto con valori di accettazione.',
+      paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll.')],
+      defaultRows:[
+        {id:'aria',  params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+        {id:'acqua', params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+        {id:'acril', params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+      ],
+      fields:[
+        { id:'inserto',  label:'Inserto',        unit:'',   type:'text'   },
+        { id:'hu_mis',   label:'HU misurato',    unit:'HU', type:'number' },
+        { id:'hu_rif',   label:'HU riferimento', unit:'HU', type:'number' },
+        { id:'delta_hu', label:'Δ HU',           unit:'HU', type:'number' },
+      ],
+      catphType: 'hu',
+    },
+    {
+      id:'catp_cos_unif', tab:'Catphan',
+      title:'Catphan – Uniformità & Rumore (costanza)',
+      desc:'Centro + 4 periferie. Registrare HU e SD. Uniformità: differenza max 5 HU.',
+      paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll.')],
+      defaultRows:[
+        {id:'centro', params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+        {id:'ore3',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+        {id:'ore6',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+        {id:'ore9',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+        {id:'ore12',  params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+      ],
+      fields:[
+        { id:'posiz',  label:'Posizione', unit:'',   type:'text'   },
+        { id:'hu_val', label:'HU',        unit:'HU', type:'number' },
+        { id:'sd_val', label:'SD',        unit:'HU', type:'number' },
+      ],
+      catphType: 'unif',
+    },
+    {
+      id:'catp_cos_res', tab:'Catphan',
+      title:'Catphan – Risoluzione Spaziale (costanza, quick)',
+      desc:'LP/cm visive e MTF 50% con kernel Standard. Verifica stabilità nel tempo.',
+      paramFields:[P('kV','kV'),P('mA','mA'),P('kernel','Kernel')],
+      defaultRows:[
+        {id:'std', params:[P('kV',120),P('mA',200),P('kernel','Standard')]},
+      ],
+      fields:[
+        { id:'lp_vis', label:'LP/cm visive', unit:'LP/cm', type:'number' },
+        { id:'mtf50',  label:'MTF 50%',      unit:'LP/cm', type:'number' },
+      ],
+      catphType: 'mtf',
     },
   ],
 
@@ -893,7 +1093,95 @@ const QC_DEF = {
       ],
       fields: CTDI_FIELDS,
     },
+
+    // ── CATPHAN annuale ──────────────────────────────────────────────────
+    {
+      id:'catp_st_hu', tab:'Catphan',
+      title:'Catphan – HU Linearity completa (stato annuale)',
+      desc:'Test completo su tutti gli inserti CTP401 a 4 tensioni (80/100/120/140 kV).',
+      paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll.')],
+      defaultRows:[
+        {id:'aria_120',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+        {id:'acqua_120',  params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+        {id:'ldpe_120',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+        {id:'poly_120',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+        {id:'acril_120',  params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+        {id:'teflon_120', params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
+        {id:'acqua_80',   params:[P('kV',80), P('mA',200),P('coll_mm',10)]},
+        {id:'acqua_100',  params:[P('kV',100),P('mA',200),P('coll_mm',10)]},
+        {id:'acqua_140',  params:[P('kV',140),P('mA',200),P('coll_mm',10)]},
+      ],
+      fields:[
+        { id:'inserto',  label:'Inserto / kV',   unit:'',   type:'text'   },
+        { id:'hu_mis',   label:'HU misurato',     unit:'HU', type:'number' },
+        { id:'hu_rif',   label:'HU riferimento',  unit:'HU', type:'number' },
+        { id:'delta_hu', label:'Δ HU',            unit:'HU', type:'number' },
+        { id:'sd_val',   label:'SD',              unit:'HU', type:'number' },
+      ],
+      catphType: 'hu',
+    },
+    {
+      id:'catp_st_unif', tab:'Catphan',
+      title:'Catphan – Uniformità & Rumore vs kV (annuale)',
+      desc:'Uniformità centro + 4 periferie a 4 kV. Studio dipendenza da kV.',
+      paramFields:[P('kV','kV'),P('mA','mA')],
+      defaultRows:[
+        {id:'ctr_80',  params:[P('kV',80), P('mA',200)]},
+        {id:'ctr_100', params:[P('kV',100),P('mA',200)]},
+        {id:'ctr_120', params:[P('kV',120),P('mA',200)]},
+        {id:'ctr_140', params:[P('kV',140),P('mA',200)]},
+      ],
+      fields:[
+        { id:'kv_lbl', label:'kV',          unit:'kV', type:'text'   },
+        { id:'hu_ctr', label:'HU centro',   unit:'HU', type:'number' },
+        { id:'sd_ctr', label:'SD centro',   unit:'HU', type:'number' },
+        { id:'unif',   label:'Δ unif. max', unit:'HU', type:'number' },
+      ],
+      catphType: 'unif',
+    },
+    {
+      id:'catp_st_res', tab:'Catphan',
+      title:'Catphan – MTF vs Kernel & kV (annuale)',
+      desc:'MTF 50% e 10% con diversi kernel e a 80/120/140 kV. CTP528.',
+      paramFields:[P('kV','kV'),P('mA','mA'),P('kernel','Kernel')],
+      defaultRows:[
+        {id:'std',    params:[P('kV',120),P('mA',200),P('kernel','Standard')]},
+        {id:'sharp',  params:[P('kV',120),P('mA',200),P('kernel','Sharp/Bone')]},
+        {id:'smooth', params:[P('kV',120),P('mA',200),P('kernel','Smooth')]},
+        {id:'std80',  params:[P('kV',80), P('mA',200),P('kernel','Standard')]},
+        {id:'std140', params:[P('kV',140),P('mA',200),P('kernel','Standard')]},
+      ],
+      fields:[
+        { id:'kernel_val', label:'Kernel/kV', unit:'',      type:'text'   },
+        { id:'lp_vis',     label:'LP/cm vis.',unit:'LP/cm', type:'number' },
+        { id:'mtf50',      label:'MTF 50%',   unit:'LP/cm', type:'number' },
+        { id:'mtf10',      label:'MTF 10%',   unit:'LP/cm', type:'number' },
+      ],
+      catphType: 'mtf',
+    },
+    {
+      id:'catp_st_lc', tab:'Catphan',
+      title:'Catphan – Basso Contrasto completo (annuale)',
+      desc:'Test completo CTP515 supra-slice e sub-slice, tutti i gruppi di contrasto.',
+      paramFields:[P('kV','kV'),P('mA','mA'),P('cpc','Contrasto %'),P('kernel','Kernel')],
+      defaultRows:[
+        {id:'sup_10', params:[P('kV',120),P('mA',200),P('cpc',1.0),P('kernel','Standard')]},
+        {id:'sup_06', params:[P('kV',120),P('mA',200),P('cpc',0.6),P('kernel','Standard')]},
+        {id:'sup_03', params:[P('kV',120),P('mA',200),P('cpc',0.3),P('kernel','Standard')]},
+        {id:'sub_10', params:[P('kV',120),P('mA',200),P('cpc',1.0),P('kernel','Standard')]},
+        {id:'sub_06', params:[P('kV',120),P('mA',200),P('cpc',0.6),P('kernel','Standard')]},
+        {id:'sub_03', params:[P('kV',120),P('mA',200),P('cpc',0.3),P('kernel','Standard')]},
+      ],
+      fields:[
+        { id:'gruppo',   label:'Gruppo',    unit:'',   type:'text'   },
+        { id:'n_visib',  label:'N° vis.',   unit:'',   type:'number' },
+        { id:'diam_min', label:'Ø min (mm)',unit:'mm', type:'number' },
+      ],
+      catphType: 'lc',
+    },
   ],
+
+
 
 };
 
@@ -1779,6 +2067,151 @@ async function saveSettings() {
   if (S.activeTab) renderActiveTab(); // Refresh to update delta colors
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════
+// REPORT CHARTS  (Chart.js 4)
+// ═══════════════════════════════════════════════════════════════════════
+function buildReportCharts() {
+  if (window._rptCharts) { window._rptCharts.forEach(c => c.destroy()); }
+  window._rptCharts = [];
+  const defs = QC_DEF[S.controlType] || [];
+  const isDark  = !document.documentElement.classList.contains('light');
+  const gColor  = isDark ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.07)';
+  const tColor  = isDark ? '#9ba8c0' : '#6b7a99';
+
+  function mkChart(id, cfg) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const c = new Chart(el.getContext('2d'), cfg);
+    window._rptCharts.push(c);
+  }
+  const base = {
+    responsive:true, maintainAspectRatio:true,
+    plugins:{ legend:{ labels:{ color:tColor, font:{size:11} } } },
+    scales:{
+      x:{ ticks:{color:tColor,font:{size:10}}, grid:{color:gColor} },
+      y:{ ticks:{color:tColor,font:{size:10}}, grid:{color:gColor} }
+    }
+  };
+
+  // ── CTDIvol bar chart ────────────────────────────────────────────────
+  const doseSec = defs.find(s => s.fields && s.fields.some(f=>f.id==='ctdi_vol'));
+  if (doseSec) {
+    const rows = getSectionRows(doseSec);
+    const kvSet = [...new Set(rows.map(r=>r.params.find(p=>p.id==='kV')?.val).filter(Boolean))];
+    const measVals = kvSet.map(kv => {
+      const r = rows.find(row=>row.params.find(p=>p.id==='kV')?.val==kv);
+      return parseFloat(S.cache[`${doseSec.id}_${r?.id}`]?.values?.ctdi_vol) || null;
+    });
+    const tcVals = kvSet.map(kv => {
+      const r = rows.find(row=>row.params.find(p=>p.id==='kV')?.val==kv);
+      return parseFloat(S.cache[`${doseSec.id}_${r?.id}`]?.values?.ctdi_vol_tc) || null;
+    });
+    if (measVals.some(v=>v!=null)) mkChart('chart-ctdi', {
+      type:'bar',
+      data:{ labels:kvSet.map(k=>k+' kV'),
+        datasets:[
+          {label:'CTDIvol mis. (mGy)', data:measVals, backgroundColor:'rgba(77,159,255,.7)', borderColor:'#4d9fff', borderWidth:1},
+          {label:'CTDIvol TC display', data:tcVals, type:'line', borderColor:'#f0a500', backgroundColor:'transparent', borderWidth:2, pointRadius:4, tension:.3},
+        ]},
+      options:base
+    });
+  }
+
+  // ── Catphan HU bar chart ──────────────────────────────────────────────
+  const huSec = defs.find(s=>s.catphType==='hu');
+  if (huSec) {
+    const rows = getSectionRows(huSec);
+    const labels=[], mis=[], rif=[];
+    rows.forEach(row=>{
+      const v = S.cache[`${huSec.id}_${row.id}`]?.values||{};
+      labels.push(v.inserto||row.id);
+      mis.push(parseFloat(v.hu_mis)||null);
+      rif.push(parseFloat(v.hu_rif)||null);
+    });
+    if (mis.some(v=>v!=null)) mkChart('chart-hu', {
+      type:'bar',
+      data:{ labels,
+        datasets:[
+          {label:'HU misurato', data:mis, backgroundColor:'rgba(77,159,255,.7)', borderColor:'#4d9fff', borderWidth:1},
+          {label:'HU riferimento', data:rif, type:'line', borderColor:'#34c264', backgroundColor:'transparent', borderWidth:2, pointRadius:5},
+        ]},
+      options:base
+    });
+  }
+
+  // ── Uniformità: HU & SD bar ────────────────────────────────────────────
+  const unifSec = defs.find(s=>s.catphType==='unif');
+  if (unifSec) {
+    const rows = getSectionRows(unifSec);
+    const labels=[], huVals=[], sdVals=[];
+    rows.forEach(row=>{
+      const v = S.cache[`${unifSec.id}_${row.id}`]?.values||{};
+      labels.push(v.posiz||v.kv_lbl||row.id);
+      huVals.push(parseFloat(v.hu_val)||parseFloat(v.hu_ctr)||null);
+      sdVals.push(parseFloat(v.sd_val)||parseFloat(v.sd_ctr)||null);
+    });
+    if (huVals.some(v=>v!=null)) mkChart('chart-unif', {
+      type:'bar',
+      data:{ labels,
+        datasets:[
+          {label:'HU acqua', data:huVals, backgroundColor:'rgba(52,194,100,.6)', borderColor:'#34c264', borderWidth:1},
+          {label:'SD (rumore, HU)', data:sdVals, type:'line', borderColor:'#f04f4f', backgroundColor:'transparent', borderWidth:2, pointRadius:4},
+        ]},
+      options:base
+    });
+  }
+
+  // ── MTF / risoluzione ──────────────────────────────────────────────────
+  const resSec = defs.find(s=>s.catphType==='mtf');
+  if (resSec) {
+    const rows = getSectionRows(resSec);
+    const labels=[], lpv=[], m50=[], m10=[];
+    rows.forEach(row=>{
+      const v = S.cache[`${resSec.id}_${row.id}`]?.values||{};
+      labels.push(v.kernel_val||row.params.find(p=>p.id==='kernel')?.val||row.id);
+      lpv.push(parseFloat(v.lp_vis)||null);
+      m50.push(parseFloat(v.mtf50)||null);
+      m10.push(parseFloat(v.mtf10)||null);
+    });
+    if (m50.some(v=>v!=null)||lpv.some(v=>v!=null)) mkChart('chart-mtf', {
+      type:'bar',
+      data:{ labels,
+        datasets:[
+          {label:'LP/cm visive', data:lpv, backgroundColor:'rgba(77,159,255,.6)', borderColor:'#4d9fff', borderWidth:1},
+          {label:'MTF 50%',      data:m50, backgroundColor:'rgba(240,165,0,.6)',  borderColor:'#f0a500', borderWidth:1},
+          {label:'MTF 10%',      data:m10, backgroundColor:'rgba(240,79,79,.6)',  borderColor:'#f04f4f', borderWidth:1},
+        ]},
+      options:base
+    });
+  }
+
+  // ── CTDIvol vs mA (linearità) ──────────────────────────────────────────
+  const linSec = defs.find(s=>s.id==='stato_lin_mas');
+  if (linSec) {
+    const rows = getSectionRows(linSec);
+    const pts = rows.map(row=>{
+      const ma = parseFloat(row.params.find(p=>p.id==='mA')?.val);
+      const cv = parseFloat(S.cache[`${linSec.id}_${row.id}`]?.values?.ctdi_vol);
+      return (!isNaN(ma)&&!isNaN(cv)) ? {x:ma,y:cv} : null;
+    }).filter(Boolean).sort((a,b)=>a.x-b.x);
+    if (pts.length>1) mkChart('chart-noise', {
+      type:'line',
+      data:{ datasets:[{label:'CTDIvol vs mA', data:pts, borderColor:'#4d9fff', backgroundColor:'rgba(77,159,255,.12)', borderWidth:2, pointRadius:5, fill:true}] },
+      options:{...base, scales:{
+        x:{...base.scales.x, title:{display:true,text:'mA',color:tColor}},
+        y:{...base.scales.y, title:{display:true,text:'CTDIvol (mGy)',color:tColor}}
+      }}
+    });
+  }
+
+  // Hide empty chart boxes
+  ['ctdi','hu','unif','mtf','noise'].forEach(id=>{
+    const box = document.getElementById('box-chart-'+id);
+    if (box) box.style.display = (window._rptCharts.length > 0 ? '' : 'none');
+  });
+}
+
 // ═══════════════════════════════════════════════════════════════════════
 // REPORT
 // ═══════════════════════════════════════════════════════════════════════
@@ -1786,6 +2219,7 @@ function showReport() {
   if (!S.control) return;
   renderReport();
   showView('report');
+  setTimeout(buildReportCharts, 80);
 }
 
 function renderReport() {
@@ -1888,6 +2322,16 @@ function renderReport() {
       </div>
     </div>
 
+    <div style="margin-bottom:24px">
+      <div class="rpt-sec-title">📊 Grafici di riepilogo</div>
+      <div class="rpt-chart-grid">
+        <div class="rpt-chart-box" id="box-chart-ctdi"><div class="rpt-chart-title">CTDIvol misurato vs display (per kV)</div><canvas id="chart-ctdi" height="200"></canvas></div>
+        <div class="rpt-chart-box" id="box-chart-hu"><div class="rpt-chart-title">HU Linearity – Catphan</div><canvas id="chart-hu" height="200"></canvas></div>
+        <div class="rpt-chart-box" id="box-chart-unif"><div class="rpt-chart-title">Uniformità &amp; Rumore – Catphan</div><canvas id="chart-unif" height="200"></canvas></div>
+        <div class="rpt-chart-box" id="box-chart-mtf"><div class="rpt-chart-title">Risoluzione Spaziale MTF – Catphan</div><canvas id="chart-mtf" height="200"></canvas></div>
+        <div class="rpt-chart-box" id="box-chart-noise"><div class="rpt-chart-title">CTDIvol vs mA (linearità dose)</div><canvas id="chart-noise" height="200"></canvas></div>
+      </div>
+    </div>
     ${sectionsHtml}
 
     <div class="conc-grid no-print">
@@ -2015,10 +2459,34 @@ document.getElementById('modal-confirm').querySelector('.btn-ghost').addEventLis
 // ═══════════════════════════════════════════════════════════════════════
 function v(id) { return document.getElementById(id)?.value?.trim() || ''; }
 
+
+// ═══════════════════════════════════════════════════════════════════════
+// THEME TOGGLE
+// ═══════════════════════════════════════════════════════════════════════
+function toggleTheme() {
+  const isLight = document.documentElement.classList.toggle('light');
+  const btn = document.getElementById('btn-theme');
+  if (btn) btn.textContent = isLight ? '🌞' : '🌙';
+  try { localStorage.setItem('tcqc_theme', isLight ? 'light' : 'dark'); } catch(e) {}
+  if (document.getElementById('view-report').classList.contains('active')) {
+    setTimeout(buildReportCharts, 60);
+  }
+}
+function applyStoredTheme() {
+  try {
+    if (localStorage.getItem('tcqc_theme') === 'light') {
+      document.documentElement.classList.add('light');
+      const btn = document.getElementById('btn-theme');
+      if (btn) btn.textContent = '🌞';
+    }
+  } catch(e) {}
+}
+
 // ═══════════════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════════════
 async function init() {
+  applyStoredTheme();
   // Mostra logo e intestazione nell'header
   const hdrLogo = document.getElementById('hdr-logo');
   if (hdrLogo) { hdrLogo.src = LOGO_MAURIZIANO; hdrLogo.style.display = 'block'; }
