@@ -28,6 +28,25 @@
   --h-head:   64px;
   --w-side:   256px;
 }
+/* ═══════════════════════════════════════════════
+   LIGHT THEME OVERRIDES
+═══════════════════════════════════════════════ */
+[data-theme="light"] {
+  --bg:       #f0f2f7;
+  --bg2:      #ffffff;
+  --bg3:      #e4e8f0;
+  --border:   #c8d0e0;
+  --text:     #1a2035;
+  --muted:    #6b7899;
+  --accent:   #1a7fd4;
+  --ok:       #1a9e50;
+  --warn:     #c07c00;
+  --fail:     #c93030;
+  --ok-bg:    rgba(26,158,80,.10);
+  --warn-bg:  rgba(192,124,0,.10);
+  --fail-bg:  rgba(201,48,48,.10);
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 14px; }
 body {
@@ -496,6 +515,7 @@ button { cursor: pointer; }
     </div>
   </div>
   <div class="breadcrumb" id="breadcrumb"></div>
+  <button class="btn btn-ghost btn-sm no-print" onclick="toggleTheme()" id="btn-theme" title="Cambia tema">🌙</button>
   <button class="btn btn-ghost btn-sm no-print" onclick="openSettings()" title="Impostazioni soglie">⚙</button>
   <button class="btn btn-ghost btn-sm no-print" onclick="seedDemoData()" title="Popola dati dimostrativi" id="btn-demo">🎲 Demo</button>
   <button class="btn btn-ghost btn-sm no-print" id="btn-report" onclick="showReport()" style="display:none">📄 Report</button>
@@ -652,6 +672,32 @@ button { cursor: pointer; }
 
 <script>
 "use strict";
+// ═══════════════════════════════════════════════════════════════════════
+// THEME TOGGLE
+// ═══════════════════════════════════════════════════════════════════════
+function toggleTheme() {
+  const isLight = document.documentElement.dataset.theme === 'light';
+  const next = isLight ? 'dark' : 'light';
+  applyTheme(next);
+  localStorage.setItem('tcqc-theme', next);
+}
+
+function applyTheme(theme) {
+  const btn = document.getElementById('btn-theme');
+  if (theme === 'light') {
+    document.documentElement.dataset.theme = 'light';
+    if (btn) btn.textContent = '☀️';
+  } else {
+    delete document.documentElement.dataset.theme;
+    if (btn) btn.textContent = '🌙';
+  }
+}
+
+// Applica il tema salvato immediatamente (evita flash)
+(function() {
+  const saved = localStorage.getItem('tcqc-theme');
+  if (saved === 'light') document.documentElement.dataset.theme = 'light';
+})();
 // ═══════════════════════════════════════════════════════════════════════
 // API MODULE
 // ═══════════════════════════════════════════════════════════════════════
@@ -878,10 +924,10 @@ const QC_DEF = {
       desc:'kV=120, coll=10mm, pitch=1, rot=0.5s, FOV=head. Variazione mAs: 50/100 (rif.)/200/300.',
       paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll.'),P('pitch','Pitch'),P('rot_s','Rot.(s)')],
       defaultRows:[
-        {id:'mas_100', params:[P('kV',120),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',0.5)]},
-        {id:'mas_50',  params:[P('kV',120),P('mA',50), P('coll_mm',10),P('pitch',1),P('rot_s',0.5)]},
-        {id:'mas_200', params:[P('kV',120),P('mA',200),P('coll_mm',10),P('pitch',1),P('rot_s',0.5)]},
-        {id:'mas_300', params:[P('kV',120),P('mA',300),P('coll_mm',10),P('pitch',1),P('rot_s',0.5)]},
+        {id:'mas_100', params:[P('kV',120),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',1)]},
+        {id:'mas_50',  params:[P('kV',120),P('mA',50), P('coll_mm',10),P('pitch',1),P('rot_s',1)]},
+        {id:'mas_200', params:[P('kV',120),P('mA',200),P('coll_mm',10),P('pitch',1),P('rot_s',1)]},
+        {id:'mas_300', params:[P('kV',120),P('mA',300),P('coll_mm',10),P('pitch',1),P('rot_s',1)]},
       ],
       fields: CTDI_FIELDS,
     },
@@ -891,10 +937,10 @@ const QC_DEF = {
       desc:'mA=100, coll=10mm, pitch=1, rot=0.5s, FOV=head. Variazione tensione: 80/100/120/140 kV.',
       paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll.'),P('pitch','Pitch'),P('rot_s','Rot.(s)')],
       defaultRows:[
-        {id:'kv_80',  params:[P('kV',80), P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',0.5)]},
-        {id:'kv_100', params:[P('kV',100),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',0.5)]},
-        {id:'kv_120', params:[P('kV',120),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',0.5)]},
-        {id:'kv_140', params:[P('kV',140),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',0.5)]},
+        {id:'kv_80',  params:[P('kV',80), P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',1)]},
+        {id:'kv_100', params:[P('kV',100),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',1)]},
+        {id:'kv_120', params:[P('kV',120),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',1)]},
+        {id:'kv_140', params:[P('kV',140),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',1)]},
       ],
       fields: CTDI_FIELDS,
     },
@@ -904,9 +950,9 @@ const QC_DEF = {
       desc:'kV=120, mA=100, rot=0.5s, FOV=head. Coll: 10mm/40mm. Pitch: 1 / 0.42.',
       paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll.'),P('pitch','Pitch'),P('rot_s','Rot.(s)')],
       defaultRows:[
-        {id:'coll_40',        params:[P('kV',120),P('mA',100),P('coll_mm',40),P('pitch',1),   P('rot_s',0.5)]},
-        {id:'pitch_042',      params:[P('kV',120),P('mA',100),P('coll_mm',10),P('pitch',0.42),P('rot_s',0.5)]},
-        {id:'coll40_pit042',  params:[P('kV',120),P('mA',100),P('coll_mm',40),P('pitch',0.42),P('rot_s',0.5)]},
+        {id:'coll_40',        params:[P('kV',120),P('mA',100),P('coll_mm',40),P('pitch',1),   P('rot_s',1)]},
+        {id:'pitch_042',      params:[P('kV',120),P('mA',100),P('coll_mm',10),P('pitch',0.42),P('rot_s',1)]},
+        {id:'coll40_pit042',  params:[P('kV',120),P('mA',100),P('coll_mm',40),P('pitch',0.42),P('rot_s',1)]},
       ],
       fields: CTDI_FIELDS,
     },
@@ -927,10 +973,10 @@ const QC_DEF = {
       desc:'FOV=large body, coll=10mm, pitch=0.969, rot=0.5s. Variazione kVp: 80–100–120–140 kV.',
       paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll.'),P('pitch','Pitch'),P('rot_s','Rot.(s)')],
       defaultRows:[
-        {id:'body_kv80',  params:[P('kV',80), P('mA',100),P('coll_mm',10),P('pitch',0.969),P('rot_s',0.5)]},
-        {id:'body_kv100', params:[P('kV',100),P('mA',100),P('coll_mm',10),P('pitch',0.969),P('rot_s',0.5)]},
-        {id:'body_kv120', params:[P('kV',120),P('mA',100),P('coll_mm',10),P('pitch',0.969),P('rot_s',0.5)]},
-        {id:'body_kv140', params:[P('kV',140),P('mA',100),P('coll_mm',10),P('pitch',0.969),P('rot_s',0.5)]},
+        {id:'body_kv80',  params:[P('kV',80), P('mA',100),P('coll_mm',10),P('pitch',0.969),P('rot_s',1)]},
+        {id:'body_kv100', params:[P('kV',100),P('mA',100),P('coll_mm',10),P('pitch',0.969),P('rot_s',1)]},
+        {id:'body_kv120', params:[P('kV',120),P('mA',100),P('coll_mm',10),P('pitch',0.969),P('rot_s',1)]},
+        {id:'body_kv140', params:[P('kV',140),P('mA',100),P('coll_mm',10),P('pitch',0.969),P('rot_s',1)]},
       ],
       fields: CTDI_FIELDS,
     },
@@ -2686,6 +2732,8 @@ function renderReportCharts() {
 // INIT
 // ═══════════════════════════════════════════════════════════════════════
 async function init() {
+  // Applica tema salvato (aggiorna icona bottone ora che il DOM è pronto)
+  applyTheme(localStorage.getItem('tcqc-theme') === 'light' ? 'light' : 'dark');
   // Mostra logo e intestazione nell'header
   const hdrLogo = document.getElementById('hdr-logo');
   if (hdrLogo) { hdrLogo.src = LOGO_MAURIZIANO; hdrLogo.style.display = 'block'; }

@@ -19,6 +19,13 @@
   --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
   --mono:'Cascadia Code','Consolas','Menlo',monospace;
 }
+[data-theme="light"] {
+  --bg:#f0f2f7; --bg2:#ffffff; --bg3:#e4e8f0; --brd:#c8d0e0;
+  --txt:#1a2035; --mut:#6b7899; --acc:#1a7fd4;
+  --ok:#1a9e50; --ok2:rgba(26,158,80,.10);
+  --warn:#c07c00; --warn2:rgba(192,124,0,.10);
+  --fail:#c93030; --fail2:rgba(201,48,48,.10);
+}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:15px;-webkit-text-size-adjust:100%}
 body{background:var(--bg);color:var(--txt);font-family:var(--sans);
@@ -216,6 +223,7 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
     <div id="hdr-inst">S.C.I. Fisica Sanitaria – A.O. Ordine Mauriziano</div>
   </div>
   <div id="bc"></div>
+  <button class="hbtn" onclick="toggleTheme()" id="btn-theme" title="Tema">🌙</button>
   <button class="hbtn" onclick="showSync()" title="Sincronizza">🔄</button>
   <button class="hbtn" onclick="openSettings()" title="Impostazioni">⚙</button>
 </div>
@@ -370,6 +378,34 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 "use strict";
 
 // ════════════════════════════════════════════════════
+// THEME TOGGLE
+// ════════════════════════════════════════════════════
+function toggleTheme() {
+  const isLight = document.documentElement.dataset.theme === 'light';
+  applyTheme(isLight ? 'dark' : 'light');
+  localStorage.setItem('tcqc-theme', isLight ? 'dark' : 'light');
+}
+
+function applyTheme(theme) {
+  const btn = document.getElementById('btn-theme');
+  if (theme === 'light') {
+    document.documentElement.dataset.theme = 'light';
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#f0f2f7');
+    if (btn) btn.textContent = '☀️';
+  } else {
+    delete document.documentElement.dataset.theme;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#0f1117');
+    if (btn) btn.textContent = '🌙';
+  }
+}
+
+// Applica subito il tema salvato (evita flash)
+(function() {
+  const saved = localStorage.getItem('tcqc-theme');
+  if (saved === 'light') document.documentElement.dataset.theme = 'light';
+})();
+
+// ════════════════════════════════════════════════════
 // QC SECTIONS – parametri da Excel Rivoli TC Philips
 // ════════════════════════════════════════════════════
 // fantoccio: 'head' | 'body' | 'aria'
@@ -424,8 +460,8 @@ const DIODO_HEAD_ROWS = [
   {id:'dh10', fant:'head', params:[P('kV',120),P('mA',100), P('coll','40mm'),P('pitch',0.984),P('rot','1s'),  P('FOV','head')]},
   {id:'dh11', fant:'head', params:[P('kV',120),P('mA',100), P('coll','20mm'),P('pitch',0.531),P('rot','1s'),  P('FOV','head')]},
   {id:'dh12', fant:'head', params:[P('kV',120),P('mA',100), P('coll','40mm'),P('pitch',0.516),P('rot','1s'),  P('FOV','head')]},
-  {id:'dh13', fant:'head', params:[P('kV',120),P('mA',100), P('coll','20mm'),P('pitch',0.969),P('rot','0.35s'),P('FOV','head')]},
-  {id:'dh14', fant:'head', params:[P('kV',120),P('mA',100), P('coll','20mm'),P('pitch',0.969),P('rot','0.7s'), P('FOV','head')]},
+  {id:'dh13', fant:'head', params:[P('kV',120),P('mA',100), P('coll','20mm'),P('pitch',0.969),P('rot','0.4s'),P('FOV','head')]},
+  {id:'dh14', fant:'head', params:[P('kV',120),P('mA',100), P('coll','20mm'),P('pitch',0.969),P('rot','1s'),  P('FOV','head')]},
 ];
 
 // Diodo BODY spirale (righe 97-117)
@@ -448,8 +484,8 @@ const DIODO_BODY_ROWS = [
   {id:'dbx10',fant:'body', params:[P('kV',120),P('mA',300),P('coll','40mm'),P('pitch',0.984),P('rot','1s'),  P('FOV','large body')]},
   {id:'dbx11',fant:'body', params:[P('kV',120),P('mA',300),P('coll','20mm'),P('pitch',0.531),P('rot','1s'),  P('FOV','large body')]},
   {id:'dbx12',fant:'body', params:[P('kV',120),P('mA',300),P('coll','40mm'),P('pitch',0.516),P('rot','1s'),  P('FOV','large body')]},
-  {id:'dbx13',fant:'body', params:[P('kV',120),P('mA',300),P('coll','20mm'),P('pitch',0.969),P('rot','0.35s'),P('FOV','large body')]},
-  {id:'dbx14',fant:'body', params:[P('kV',120),P('mA',300),P('coll','20mm'),P('pitch',0.969),P('rot','0.7s'), P('FOV','large body')]},
+  {id:'dbx13',fant:'body', params:[P('kV',120),P('mA',300),P('coll','20mm'),P('pitch',0.969),P('rot','0.4s'),P('FOV','large body')]},
+  {id:'dbx14',fant:'body', params:[P('kV',120),P('mA',300),P('coll','20mm'),P('pitch',0.969),P('rot','1s'), P('FOV','large body')]},
 ];
 
 // Collimazione (gafchromica)
@@ -469,26 +505,26 @@ const RIC_ROWS_2 = [[0,200],[10,180],[20,160],[30,140],[40,120],[50,100],[60,80]
 
 // Annuale diodo HEAD (da Excel Annuale)
 const ANNUALE_HEAD_ROWS = [
-  {id:'ah1',  fant:'head', params:[P('kV',120),P('mA',100),P('coll','10mm'),P('pitch',1),    P('rot','0.5s'),P('FOV','head')]},
-  {id:'ah2',  fant:'head', params:[P('kV',120),P('mA',100),P('coll','10mm'),P('pitch',1),    P('rot','0.5s'),P('FOV','head')]},
-  {id:'ah3',  fant:'head', params:[P('kV',120),P('mA',100),P('coll','10mm'),P('pitch',1),    P('rot','0.5s'),P('FOV','head')]},
-  {id:'ah4',  fant:'head', params:[P('kV',80), P('mA',100),P('coll','10mm'),P('pitch',1),    P('rot','0.5s'),P('FOV','head')]},
-  {id:'ah5',  fant:'head', params:[P('kV',100),P('mA',100),P('coll','10mm'),P('pitch',1),    P('rot','0.5s'),P('FOV','head')]},
-  {id:'ah6',  fant:'head', params:[P('kV',140),P('mA',100),P('coll','10mm'),P('pitch',1),    P('rot','0.5s'),P('FOV','head')]},
-  {id:'ah7',  fant:'head', params:[P('kV',120),P('mA',50), P('coll','10mm'),P('pitch',1),    P('rot','0.5s'),P('FOV','head')]},
-  {id:'ah8',  fant:'head', params:[P('kV',120),P('mA',200),P('coll','10mm'),P('pitch',1),    P('rot','0.5s'),P('FOV','head')]},
-  {id:'ah9',  fant:'head', params:[P('kV',120),P('mA',300),P('coll','10mm'),P('pitch',1),    P('rot','0.5s'),P('FOV','head')]},
-  {id:'ah10', fant:'head', params:[P('kV',120),P('mA',100),P('coll','40mm'),P('pitch',1),    P('rot','0.5s'),P('FOV','head')]},
-  {id:'ah11', fant:'head', params:[P('kV',120),P('mA',100),P('coll','10mm'),P('pitch',0.42), P('rot','0.5s'),P('FOV','head')]},
-  {id:'ah12', fant:'head', params:[P('kV',120),P('mA',100),P('coll','40mm'),P('pitch',0.42), P('rot','0.5s'),P('FOV','head')]},
+  {id:'ah1',  fant:'head', params:[P('kV',120),P('mA',100),P('coll','10mm'),P('pitch',1),    P('rot','1s'),P('FOV','head')]},
+  {id:'ah2',  fant:'head', params:[P('kV',120),P('mA',100),P('coll','10mm'),P('pitch',1),    P('rot','1s'),P('FOV','head')]},
+  {id:'ah3',  fant:'head', params:[P('kV',120),P('mA',100),P('coll','10mm'),P('pitch',1),    P('rot','1s'),P('FOV','head')]},
+  {id:'ah4',  fant:'head', params:[P('kV',80), P('mA',100),P('coll','10mm'),P('pitch',1),    P('rot','1s'),P('FOV','head')]},
+  {id:'ah5',  fant:'head', params:[P('kV',100),P('mA',100),P('coll','10mm'),P('pitch',1),    P('rot','1s'),P('FOV','head')]},
+  {id:'ah6',  fant:'head', params:[P('kV',140),P('mA',100),P('coll','10mm'),P('pitch',1),    P('rot','1s'),P('FOV','head')]},
+  {id:'ah7',  fant:'head', params:[P('kV',120),P('mA',50), P('coll','10mm'),P('pitch',1),    P('rot','1s'),P('FOV','head')]},
+  {id:'ah8',  fant:'head', params:[P('kV',120),P('mA',200),P('coll','10mm'),P('pitch',1),    P('rot','1s'),P('FOV','head')]},
+  {id:'ah9',  fant:'head', params:[P('kV',120),P('mA',300),P('coll','10mm'),P('pitch',1),    P('rot','1s'),P('FOV','head')]},
+  {id:'ah10', fant:'head', params:[P('kV',120),P('mA',100),P('coll','40mm'),P('pitch',1),    P('rot','1s'),P('FOV','head')]},
+  {id:'ah11', fant:'head', params:[P('kV',120),P('mA',100),P('coll','10mm'),P('pitch',0.42), P('rot','1s'),P('FOV','head')]},
+  {id:'ah12', fant:'head', params:[P('kV',120),P('mA',100),P('coll','40mm'),P('pitch',0.42), P('rot','1s'),P('FOV','head')]},
   {id:'ah13', fant:'head', params:[P('kV',120),P('mA',100),P('coll','10mm'),P('pitch',1),    P('rot','0.4s'),P('FOV','head')]},
   {id:'ah14', fant:'head', params:[P('kV',120),P('mA',100),P('coll','10mm'),P('pitch',1),    P('rot','1s'),  P('FOV','head')]},
 ];
 const ANNUALE_BODY_ROWS = [
-  {id:'ab1', fant:'body', params:[P('kV',20), P('mA',100),P('coll','10mm'),P('pitch',0.969),P('rot','0.5s'),P('FOV','large body')]},
-  {id:'ab2', fant:'body', params:[P('kV',100),P('mA',100),P('coll','10mm'),P('pitch',0.969),P('rot','0.5s'),P('FOV','large body')]},
-  {id:'ab3', fant:'body', params:[P('kV',120),P('mA',100),P('coll','10mm'),P('pitch',0.969),P('rot','0.5s'),P('FOV','large body')]},
-  {id:'ab4', fant:'body', params:[P('kV',140),P('mA',100),P('coll','10mm'),P('pitch',0.969),P('rot','0.5s'),P('FOV','large body')]},
+  {id:'ab1', fant:'body', params:[P('kV',20), P('mA',100),P('coll','10mm'),P('pitch',0.969),P('rot','1s'),P('FOV','large body')]},
+  {id:'ab2', fant:'body', params:[P('kV',100),P('mA',100),P('coll','10mm'),P('pitch',0.969),P('rot','1s'),P('FOV','large body')]},
+  {id:'ab3', fant:'body', params:[P('kV',120),P('mA',100),P('coll','10mm'),P('pitch',0.969),P('rot','1s'),P('FOV','large body')]},
+  {id:'ab4', fant:'body', params:[P('kV',140),P('mA',100),P('coll','10mm'),P('pitch',0.969),P('rot','1s'),P('FOV','large body')]},
 ];
 
 // Semestrale assiale
@@ -1283,6 +1319,7 @@ document.getElementById('mc-ok').addEventListener('click', () => {
 // INIT
 // ════════════════════════════════════════════════════
 function init() {
+  applyTheme(localStorage.getItem('tcqc-theme') === 'light' ? 'light' : 'dark');
   // Logo istituzionale
   const hdrLogo = document.getElementById('hdr-logo');
   if (hdrLogo) hdrLogo.src = LOGO_MAURIZIANO;
