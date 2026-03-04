@@ -28,6 +28,25 @@
   --h-head:   64px;
   --w-side:   256px;
 }
+/* ═══════════════════════════════════════════════
+   LIGHT THEME OVERRIDES
+═══════════════════════════════════════════════ */
+[data-theme="light"] {
+  --bg:       #f0f2f7;
+  --bg2:      #ffffff;
+  --bg3:      #e4e8f0;
+  --border:   #c8d0e0;
+  --text:     #1a2035;
+  --muted:    #6b7899;
+  --accent:   #1a7fd4;
+  --ok:       #1a9e50;
+  --warn:     #c07c00;
+  --fail:     #c93030;
+  --ok-bg:    rgba(26,158,80,.10);
+  --warn-bg:  rgba(192,124,0,.10);
+  --fail-bg:  rgba(201,48,48,.10);
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 14px; }
 body {
@@ -35,32 +54,6 @@ body {
   font-family: var(--sans); min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
-
-/* ── LIGHT THEME ─────────────────────────────── */
-:root.light {
-  --bg:       #f4f6fb;
-  --bg2:      #ffffff;
-  --bg3:      #eaf0f9;
-  --border:   #c8d3e6;
-  --text:     #1a2133;
-  --muted:    #6b7a99;
-  --accent:   #1a6fd4;
-  --ok:       #1a9c50;
-  --warn:     #c07800;
-  --fail:     #c0232c;
-  --ok-bg:    rgba(26,156,80,.10);
-  --warn-bg:  rgba(192,120,0,.10);
-  --fail-bg:  rgba(192,35,44,.10);
-}
-.theme-toggle {
-  width: 32px; height: 32px; border-radius: 50%;
-  border: 1px solid var(--border); background: transparent;
-  color: var(--text); font-size: .95rem; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: all .2s; flex-shrink: 0;
-}
-.theme-toggle:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
-
 input, select, textarea, button { font-family: inherit; }
 button { cursor: pointer; }
 
@@ -315,6 +308,16 @@ button { cursor: pointer; }
 .d-warn .delta-bar-fill { background: var(--warn); }
 .d-fail .delta-bar-fill { background: var(--fail); }
 
+/* Linked row badge */
+.link-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: .68rem; font-family: var(--mono);
+  background: rgba(77,159,255,.12); border: 1px solid rgba(77,159,255,.35);
+  color: var(--accent); border-radius: 4px; padding: 1px 6px; margin-bottom: 6px;
+  cursor: default;
+}
+.link-badge svg { width: 10px; height: 10px; }
+
 /* Yes/No toggle */
 .yn-grp { display: flex; gap: 6px; }
 .yn-btn { flex: 1; padding: 7px; border-radius: 5px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: .85rem; font-weight: 500; transition: all .15s; }
@@ -386,25 +389,6 @@ button { cursor: pointer; }
 /* ═══════════════════════════════════════════════
    MISC
 ═══════════════════════════════════════════════ */
-
-/* ═══════════════════════════════════════════════
-   CHARTS IN REPORT
-═══════════════════════════════════════════════ */
-.rpt-chart-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(360px,1fr));
-  gap: 16px; margin-bottom: 24px;
-}
-.rpt-chart-box {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 14px;
-}
-.rpt-chart-title {
-  font-size: .75rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .06em; color: var(--muted); margin-bottom: 10px;
-}
-@media print {
-  .rpt-chart-grid { grid-template-columns: 1fr 1fr; break-inside: avoid; }
-}
 .empty { text-align: center; padding: 40px; color: var(--muted); }
 .empty .ico { font-size: 2rem; margin-bottom: 10px; }
 .divider { height: 1px; background: var(--border); margin: 16px 0; }
@@ -412,6 +396,47 @@ button { cursor: pointer; }
 .badge-ok   { background: var(--ok-bg);   color: var(--ok);   border-color: var(--ok); }
 .badge-warn { background: var(--warn-bg); color: var(--warn); border-color: var(--warn); }
 .badge-fail { background: var(--fail-bg); color: var(--fail); border-color: var(--fail); }
+
+/* ═══════════════════════════════════════════════
+   GRAFICI SVG REPORT
+═══════════════════════════════════════════════ */
+.rpt-charts-section { margin-bottom: 24px; }
+.rpt-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 16px;
+  margin-bottom: 6px;
+}
+.rpt-chart-box {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 14px 16px;
+  break-inside: avoid;
+  transition: border-color .15s;
+}
+.rpt-chart-box:hover { border-color: rgba(77,159,255,.4); }
+.rpt-chart-title {
+  font-size: .74rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .07em; color: var(--muted); margin-bottom: 10px;
+  display: flex; align-items: center; gap: 6px;
+}
+.rpt-chart-box svg { display: block; width: 100%; overflow: visible; }
+
+/* Firme editabili */
+.sign-field {
+  border: none; border-bottom: 1px solid var(--border);
+  background: transparent; color: var(--text);
+  font-family: var(--sans); font-size: .88rem;
+  width: 100%; outline: none; padding: 3px 0;
+  transition: border-color .15s;
+}
+.sign-field:focus { border-bottom-color: var(--accent); }
+
+@media print {
+  .rpt-charts-grid { grid-template-columns: 1fr 1fr; }
+  .rpt-chart-box { background: white; border-color: #ddd; }
+  .rpt-chart-title { color: #666; }
+  .sign-field { border-bottom-color: #aaa; color: black; }
+}
 
 /* ═══════════════════════════════════════════════
    RESPONSIVE – MOBILE
@@ -444,6 +469,7 @@ button { cursor: pointer; }
   /* Prevent mid-row cuts */
   .rpt-table tr   { break-inside: avoid; page-break-inside: avoid; }
   .rpt-section    { break-inside: auto;  page-break-inside: auto; }
+  .rpt-charts-section { break-inside: avoid; page-break-inside: avoid; }
 
   /* Keep section title with its table */
   .rpt-sec-title  { break-after: avoid;  page-break-after: avoid; }
@@ -482,7 +508,6 @@ button { cursor: pointer; }
   .s-fail { color: #a00; }
 }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -502,8 +527,9 @@ button { cursor: pointer; }
     </div>
   </div>
   <div class="breadcrumb" id="breadcrumb"></div>
-  <button class="theme-toggle no-print" id="btn-theme" onclick="toggleTheme()" title="Tema chiaro/scuro">🌙</button>
+  <button class="btn btn-ghost btn-sm no-print" onclick="toggleTheme()" id="btn-theme" title="Cambia tema">🌙</button>
   <button class="btn btn-ghost btn-sm no-print" onclick="openSettings()" title="Impostazioni soglie">⚙</button>
+  <button class="btn btn-ghost btn-sm no-print" onclick="seedDemoData()" title="Popola dati dimostrativi" id="btn-demo">🎲 Demo</button>
   <button class="btn btn-ghost btn-sm no-print" id="btn-report" onclick="showReport()" style="display:none">📄 Report</button>
 </header>
 
@@ -620,7 +646,7 @@ button { cursor: pointer; }
       </div>
     </div>
     <p style="font-size:.8rem;color:var(--muted);margin-top:10px">
-      Δ% = |CTDIvol<sub>misurato</sub> − CTDIvol<sub>TC</sub>| / CTDIvol<sub>TC</sub> × 100<br>
+      Δ% = |CTDIvol<sub>misurato</sub> − CTDIvol<sub>TC</sub>| / CTDIvol<sub>misurato</sub> × 100<br>
       Verde ≤ soglia attenzione · Giallo &gt; attenzione ≤ non conforme · Rosso &gt; non conforme
     </p>
     <div class="modal-footer">
@@ -659,6 +685,32 @@ button { cursor: pointer; }
 <script>
 "use strict";
 // ═══════════════════════════════════════════════════════════════════════
+// THEME TOGGLE
+// ═══════════════════════════════════════════════════════════════════════
+function toggleTheme() {
+  const isLight = document.documentElement.dataset.theme === 'light';
+  const next = isLight ? 'dark' : 'light';
+  applyTheme(next);
+  localStorage.setItem('tcqc-theme', next);
+}
+
+function applyTheme(theme) {
+  const btn = document.getElementById('btn-theme');
+  if (theme === 'light') {
+    document.documentElement.dataset.theme = 'light';
+    if (btn) btn.textContent = '☀️';
+  } else {
+    delete document.documentElement.dataset.theme;
+    if (btn) btn.textContent = '🌙';
+  }
+}
+
+// Applica il tema salvato immediatamente (evita flash)
+(function() {
+  const saved = localStorage.getItem('tcqc-theme');
+  if (saved === 'light') document.documentElement.dataset.theme = 'light';
+})();
+// ═══════════════════════════════════════════════════════════════════════
 // API MODULE
 // ═══════════════════════════════════════════════════════════════════════
 const api = {
@@ -689,8 +741,8 @@ const api = {
 // SECTION DEFINITIONS  (no Catphan)
 // ═══════════════════════════════════════════════════════════════════════
 
-// Delta% tooltip: |(ctdi_vol - ctdi_vol_tc) / ctdi_vol_tc| × 100
-// Computed automatically from ctdi_vol + ctdi_vol_tc fields
+// Delta% formula: |CTDIvol_TC - CTDIvol_mis| / CTDIvol_mis × 100  (divisore = MISURATO, come da Excel)
+// Computed automatically from ctdi_vol (isDeltaA) + ctdi_vol_tc (isDeltaB) fields
 // Collimazione: |(coll_mis - coll_nom) / coll_nom| × 100
 
 // param field descriptor: { id, label, editable: true/false }
@@ -842,106 +894,6 @@ const QC_DEF = {
         { id:'rumore', label:'Rumore (dev std)', unit:'HU', type:'number' },
       ],
     },
-
-    // ── CATPHAN ─────────────────────────────────────────────────────────
-    {
-      id:'catp_hu', tab:'Catphan',
-      title:'Accuratezza Numero TC (HU) – Catphan CTP401',
-      desc:'Misurare HU per ciascun inserto del modulo sensitometria. kV=120, mA=200, coll=10mm.',
-      paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll.')],
-      defaultRows:[
-        {id:'aria',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-        {id:'acqua',  params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-        {id:'ldpe',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-        {id:'poly',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-        {id:'acril',  params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-        {id:'teflon', params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-      ],
-      fields:[
-        { id:'inserto',  label:'Inserto',        unit:'',   type:'text'   },
-        { id:'hu_mis',   label:'HU misurato',    unit:'HU', type:'number' },
-        { id:'hu_rif',   label:'HU riferimento', unit:'HU', type:'number' },
-        { id:'delta_hu', label:'Δ HU',           unit:'HU', type:'number' },
-      ],
-      catphType: 'hu',
-    },
-    {
-      id:'catp_unif', tab:'Catphan',
-      title:'Uniformità Campo TC – Catphan CTP486',
-      desc:'Misurare HU e SD in 5 posizioni (centro + 4 periferie). Diff. centro–periferia ≤ 5 HU.',
-      paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll.')],
-      defaultRows:[
-        {id:'centro', params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-        {id:'ore3',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-        {id:'ore6',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-        {id:'ore9',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-        {id:'ore12',  params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-      ],
-      fields:[
-        { id:'posiz',  label:'Posizione', unit:'',   type:'text'   },
-        { id:'hu_val', label:'HU',        unit:'HU', type:'number' },
-        { id:'sd_val', label:'SD',        unit:'HU', type:'number' },
-      ],
-      catphType: 'unif',
-    },
-    {
-      id:'catp_res', tab:'Catphan',
-      title:'Risoluzione Spaziale ad Alto Contrasto – Catphan CTP528',
-      desc:'LP/cm visive e MTF 50%/10% da line spread function. Multi-kernel.',
-      paramFields:[P('kV','kV'),P('mA','mA'),P('kernel','Kernel')],
-      defaultRows:[
-        {id:'std',    params:[P('kV',120),P('mA',200),P('kernel','Standard')]},
-        {id:'sharp',  params:[P('kV',120),P('mA',200),P('kernel','Sharp/Bone')]},
-        {id:'smooth', params:[P('kV',120),P('mA',200),P('kernel','Smooth')]},
-      ],
-      fields:[
-        { id:'kernel_val', label:'Kernel',       unit:'',       type:'text'   },
-        { id:'lp_vis',     label:'LP/cm visive', unit:'LP/cm',  type:'number' },
-        { id:'mtf50',      label:'MTF 50%',      unit:'LP/cm',  type:'number' },
-        { id:'mtf10',      label:'MTF 10%',      unit:'LP/cm',  type:'number' },
-      ],
-      catphType: 'mtf',
-    },
-    {
-      id:'catp_lc', tab:'Catphan',
-      title:'Risoluzione a Basso Contrasto – Catphan CTP515',
-      desc:'Supra-slice e sub-slice: N° dischi visibili e diametro minimo rilevabile per gruppo.',
-      paramFields:[P('kV','kV'),P('mA','mA'),P('cpc','Contrasto %'),P('kernel','Kernel')],
-      defaultRows:[
-        {id:'sup_10', params:[P('kV',120),P('mA',200),P('cpc',1.0),P('kernel','Standard')]},
-        {id:'sup_06', params:[P('kV',120),P('mA',200),P('cpc',0.6),P('kernel','Standard')]},
-        {id:'sup_03', params:[P('kV',120),P('mA',200),P('cpc',0.3),P('kernel','Standard')]},
-        {id:'sub_10', params:[P('kV',120),P('mA',200),P('cpc',1.0),P('kernel','Standard')]},
-        {id:'sub_06', params:[P('kV',120),P('mA',200),P('cpc',0.6),P('kernel','Standard')]},
-        {id:'sub_03', params:[P('kV',120),P('mA',200),P('cpc',0.3),P('kernel','Standard')]},
-      ],
-      fields:[
-        { id:'gruppo',   label:'Gruppo/tipo',    unit:'',   type:'text'   },
-        { id:'n_visib',  label:'N° dischi vis.', unit:'',   type:'number' },
-        { id:'diam_min', label:'Ø min (mm)',      unit:'mm', type:'number' },
-      ],
-      catphType: 'lc',
-    },
-    {
-      id:'catp_geom', tab:'Catphan',
-      title:'Accuratezza Geometrica & Spessore Strato – Catphan CTP401/404',
-      desc:'5 distanze nominali tra pin (tol. ±1 mm) + spessore strato (tol. ±1 mm o ±50%).',
-      paramFields:[P('kV','kV'),P('mA','mA')],
-      defaultRows:[
-        {id:'d1', params:[P('kV',120),P('mA',200)]},
-        {id:'d2', params:[P('kV',120),P('mA',200)]},
-        {id:'d3', params:[P('kV',120),P('mA',200)]},
-        {id:'d4', params:[P('kV',120),P('mA',200)]},
-        {id:'d5', params:[P('kV',120),P('mA',200)]},
-      ],
-      fields:[
-        { id:'dist_id', label:'Coppia/tipo', unit:'',   type:'text'   },
-        { id:'d_nom',   label:'Nom. (mm)',   unit:'mm', type:'number' },
-        { id:'d_mis',   label:'Mis. (mm)',   unit:'mm', type:'number' },
-        { id:'d_err',   label:'Errore (mm)', unit:'mm', type:'number' },
-      ],
-      catphType: 'geom',
-    },
   ],
 
   costanza: [
@@ -972,59 +924,6 @@ const QC_DEF = {
         { id:'ctdi_vol_tc', label:'CTDIvol TC display',  unit:'mGy', type:'number', isDeltaB:true },
       ],
     },
-
-    // ── CATPHAN semestrale ────────────────────────────────────────────────
-    {
-      id:'catp_cos_hu', tab:'Catphan',
-      title:'Catphan – HU Linearity (costanza semestrale)',
-      desc:'Acqua, aria, acrilico. kV=120, mA=200, coll=10mm. Confronto con valori di accettazione.',
-      paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll.')],
-      defaultRows:[
-        {id:'aria',  params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-        {id:'acqua', params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-        {id:'acril', params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-      ],
-      fields:[
-        { id:'inserto',  label:'Inserto',        unit:'',   type:'text'   },
-        { id:'hu_mis',   label:'HU misurato',    unit:'HU', type:'number' },
-        { id:'hu_rif',   label:'HU riferimento', unit:'HU', type:'number' },
-        { id:'delta_hu', label:'Δ HU',           unit:'HU', type:'number' },
-      ],
-      catphType: 'hu',
-    },
-    {
-      id:'catp_cos_unif', tab:'Catphan',
-      title:'Catphan – Uniformità & Rumore (costanza)',
-      desc:'Centro + 4 periferie. Registrare HU e SD. Uniformità: differenza max 5 HU.',
-      paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll.')],
-      defaultRows:[
-        {id:'centro', params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-        {id:'ore3',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-        {id:'ore6',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-        {id:'ore9',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-        {id:'ore12',  params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-      ],
-      fields:[
-        { id:'posiz',  label:'Posizione', unit:'',   type:'text'   },
-        { id:'hu_val', label:'HU',        unit:'HU', type:'number' },
-        { id:'sd_val', label:'SD',        unit:'HU', type:'number' },
-      ],
-      catphType: 'unif',
-    },
-    {
-      id:'catp_cos_res', tab:'Catphan',
-      title:'Catphan – Risoluzione Spaziale (costanza, quick)',
-      desc:'LP/cm visive e MTF 50% con kernel Standard. Verifica stabilità nel tempo.',
-      paramFields:[P('kV','kV'),P('mA','mA'),P('kernel','Kernel')],
-      defaultRows:[
-        {id:'std', params:[P('kV',120),P('mA',200),P('kernel','Standard')]},
-      ],
-      fields:[
-        { id:'lp_vis', label:'LP/cm visive', unit:'LP/cm', type:'number' },
-        { id:'mtf50',  label:'MTF 50%',      unit:'LP/cm', type:'number' },
-      ],
-      catphType: 'mtf',
-    },
   ],
 
   // ── PROVA DI STATO ANNUALE ─────────────────────────────────────────────
@@ -1037,10 +936,10 @@ const QC_DEF = {
       desc:'kV=120, coll=10mm, pitch=1, rot=0.5s, FOV=head. Variazione mAs: 50/100 (rif.)/200/300.',
       paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll.'),P('pitch','Pitch'),P('rot_s','Rot.(s)')],
       defaultRows:[
-        {id:'mas_100', params:[P('kV',120),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',0.5)]},
-        {id:'mas_50',  params:[P('kV',120),P('mA',50), P('coll_mm',10),P('pitch',1),P('rot_s',0.5)]},
-        {id:'mas_200', params:[P('kV',120),P('mA',200),P('coll_mm',10),P('pitch',1),P('rot_s',0.5)]},
-        {id:'mas_300', params:[P('kV',120),P('mA',300),P('coll_mm',10),P('pitch',1),P('rot_s',0.5)]},
+        {id:'mas_100', params:[P('kV',120),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',1)]},
+        {id:'mas_50',  params:[P('kV',120),P('mA',50), P('coll_mm',10),P('pitch',1),P('rot_s',1)]},
+        {id:'mas_200', params:[P('kV',120),P('mA',200),P('coll_mm',10),P('pitch',1),P('rot_s',1)]},
+        {id:'mas_300', params:[P('kV',120),P('mA',300),P('coll_mm',10),P('pitch',1),P('rot_s',1)]},
       ],
       fields: CTDI_FIELDS,
     },
@@ -1050,10 +949,10 @@ const QC_DEF = {
       desc:'mA=100, coll=10mm, pitch=1, rot=0.5s, FOV=head. Variazione tensione: 80/100/120/140 kV.',
       paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll.'),P('pitch','Pitch'),P('rot_s','Rot.(s)')],
       defaultRows:[
-        {id:'kv_80',  params:[P('kV',80), P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',0.5)]},
-        {id:'kv_100', params:[P('kV',100),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',0.5)]},
-        {id:'kv_120', params:[P('kV',120),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',0.5)]},
-        {id:'kv_140', params:[P('kV',140),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',0.5)]},
+        {id:'kv_80',  params:[P('kV',80), P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',1)]},
+        {id:'kv_100', params:[P('kV',100),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',1)]},
+        {id:'kv_120', params:[P('kV',120),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',1)]},
+        {id:'kv_140', params:[P('kV',140),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',1)]},
       ],
       fields: CTDI_FIELDS,
     },
@@ -1063,9 +962,9 @@ const QC_DEF = {
       desc:'kV=120, mA=100, rot=0.5s, FOV=head. Coll: 10mm/40mm. Pitch: 1 / 0.42.',
       paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll.'),P('pitch','Pitch'),P('rot_s','Rot.(s)')],
       defaultRows:[
-        {id:'coll_40',        params:[P('kV',120),P('mA',100),P('coll_mm',40),P('pitch',1),   P('rot_s',0.5)]},
-        {id:'pitch_042',      params:[P('kV',120),P('mA',100),P('coll_mm',10),P('pitch',0.42),P('rot_s',0.5)]},
-        {id:'coll40_pit042',  params:[P('kV',120),P('mA',100),P('coll_mm',40),P('pitch',0.42),P('rot_s',0.5)]},
+        {id:'coll_40',        params:[P('kV',120),P('mA',100),P('coll_mm',40),P('pitch',1),   P('rot_s',1)]},
+        {id:'pitch_042',      params:[P('kV',120),P('mA',100),P('coll_mm',10),P('pitch',0.42),P('rot_s',1)]},
+        {id:'coll40_pit042',  params:[P('kV',120),P('mA',100),P('coll_mm',40),P('pitch',0.42),P('rot_s',1)]},
       ],
       fields: CTDI_FIELDS,
     },
@@ -1086,102 +985,64 @@ const QC_DEF = {
       desc:'FOV=large body, coll=10mm, pitch=0.969, rot=0.5s. Variazione kVp: 80–100–120–140 kV.',
       paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll.'),P('pitch','Pitch'),P('rot_s','Rot.(s)')],
       defaultRows:[
-        {id:'body_kv80',  params:[P('kV',80), P('mA',100),P('coll_mm',10),P('pitch',0.969),P('rot_s',0.5)]},
-        {id:'body_kv100', params:[P('kV',100),P('mA',100),P('coll_mm',10),P('pitch',0.969),P('rot_s',0.5)]},
-        {id:'body_kv120', params:[P('kV',120),P('mA',100),P('coll_mm',10),P('pitch',0.969),P('rot_s',0.5)]},
-        {id:'body_kv140', params:[P('kV',140),P('mA',100),P('coll_mm',10),P('pitch',0.969),P('rot_s',0.5)]},
+        {id:'body_kv80',  params:[P('kV',80), P('mA',100),P('coll_mm',10),P('pitch',0.969),P('rot_s',1)]},
+        {id:'body_kv100', params:[P('kV',100),P('mA',100),P('coll_mm',10),P('pitch',0.969),P('rot_s',1)]},
+        {id:'body_kv120', params:[P('kV',120),P('mA',100),P('coll_mm',10),P('pitch',0.969),P('rot_s',1)]},
+        {id:'body_kv140', params:[P('kV',140),P('mA',100),P('coll_mm',10),P('pitch',0.969),P('rot_s',1)]},
       ],
       fields: CTDI_FIELDS,
     },
 
-    // ── CATPHAN annuale ──────────────────────────────────────────────────
+    // ── COSTANZA NELLA PROVA DI STATO ─────────────────────────────────────
     {
-      id:'catp_st_hu', tab:'Catphan',
-      title:'Catphan – HU Linearity completa (stato annuale)',
-      desc:'Test completo su tutti gli inserti CTP401 a 4 tensioni (80/100/120/140 kV).',
-      paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll.')],
-      defaultRows:[
-        {id:'aria_120',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-        {id:'acqua_120',  params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-        {id:'ldpe_120',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-        {id:'poly_120',   params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-        {id:'acril_120',  params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-        {id:'teflon_120', params:[P('kV',120),P('mA',200),P('coll_mm',10)]},
-        {id:'acqua_80',   params:[P('kV',80), P('mA',200),P('coll_mm',10)]},
-        {id:'acqua_100',  params:[P('kV',100),P('mA',200),P('coll_mm',10)]},
-        {id:'acqua_140',  params:[P('kV',140),P('mA',200),P('coll_mm',10)]},
-      ],
+      id:'stato_riprod', tab:'Costanza',
+      title:'Riproducibilità CTDI – 3 misure (Stato)',
+      desc:'Verifica riproducibilità dose. kV=120, mA=100, coll=10mm, rot=1s, FOV=head. Δ% rispetto alla media.',
+      paramFields:[P('misura','Misura #'),P('kV','kV'),P('mA','mA'),P('coll_mm','Coll. (mm)'),P('rot_s','Rot. (s)'),P('fov','FOV')],
+      defaultRows:[1,2,3].map(n => ({
+        id:`srip_${n}`, params:[P('misura',n),P('kV',120),P('mA',100),P('coll_mm',10),P('rot_s',1),P('fov','head')]
+      })),
       fields:[
-        { id:'inserto',  label:'Inserto / kV',   unit:'',   type:'text'   },
-        { id:'hu_mis',   label:'HU misurato',     unit:'HU', type:'number' },
-        { id:'hu_rif',   label:'HU riferimento',  unit:'HU', type:'number' },
-        { id:'delta_hu', label:'Δ HU',            unit:'HU', type:'number' },
-        { id:'sd_val',   label:'SD',              unit:'HU', type:'number' },
+        { id:'dose_air',  label:'Dose free air', unit:'mGy·cm', type:'number' },
+        { id:'pct_media', label:'% vs media',     unit:'%',      type:'number', isReprod:true },
       ],
-      catphType: 'hu',
     },
     {
-      id:'catp_st_unif', tab:'Catphan',
-      title:'Catphan – Uniformità & Rumore vs kV (annuale)',
-      desc:'Uniformità centro + 4 periferie a 4 kV. Studio dipendenza da kV.',
-      paramFields:[P('kV','kV'),P('mA','mA')],
+      id:'stato_rumore', tab:'Costanza',
+      title:'Rumore e numero TC (Stato) – Fantoccio uniforme',
+      desc:'Misura di rumore (dev.std HU) e valore medio HU nel fantoccio di acqua. kV=120, mA=100, coll=10mm.',
+      paramFields:[P('posiz','Posiz.'),P('kV','kV'),P('mA','mA'),P('coll_mm','Coll. (mm)'),P('fov','FOV')],
       defaultRows:[
-        {id:'ctr_80',  params:[P('kV',80), P('mA',200)]},
-        {id:'ctr_100', params:[P('kV',100),P('mA',200)]},
-        {id:'ctr_120', params:[P('kV',120),P('mA',200)]},
-        {id:'ctr_140', params:[P('kV',140),P('mA',200)]},
+        {id:'rumore_c',  params:[P('posiz','Centro'), P('kV',120),P('mA',100),P('coll_mm',10),P('fov','head')]},
+        {id:'rumore_3h', params:[P('posiz','Ore 3'),  P('kV',120),P('mA',100),P('coll_mm',10),P('fov','head')]},
+        {id:'rumore_6h', params:[P('posiz','Ore 6'),  P('kV',120),P('mA',100),P('coll_mm',10),P('fov','head')]},
+        {id:'rumore_9h', params:[P('posiz','Ore 9'),  P('kV',120),P('mA',100),P('coll_mm',10),P('fov','head')]},
+        {id:'rumore_12h',params:[P('posiz','Ore 12'), P('kV',120),P('mA',100),P('coll_mm',10),P('fov','head')]},
       ],
       fields:[
-        { id:'kv_lbl', label:'kV',          unit:'kV', type:'text'   },
-        { id:'hu_ctr', label:'HU centro',   unit:'HU', type:'number' },
-        { id:'sd_ctr', label:'SD centro',   unit:'HU', type:'number' },
-        { id:'unif',   label:'Δ unif. max', unit:'HU', type:'number' },
+        { id:'hu_mean',  label:'HU medio',           unit:'HU',  type:'number' },
+        { id:'hu_std',   label:'Rumore (dev.std)',    unit:'HU',  type:'number' },
       ],
-      catphType: 'unif',
     },
     {
-      id:'catp_st_res', tab:'Catphan',
-      title:'Catphan – MTF vs Kernel & kV (annuale)',
-      desc:'MTF 50% e 10% con diversi kernel e a 80/120/140 kV. CTP528.',
-      paramFields:[P('kV','kV'),P('mA','mA'),P('kernel','Kernel')],
+      id:'stato_uniformita', tab:'Costanza',
+      title:'Uniformità e artefatti (Stato) – Fantoccio uniforme',
+      desc:'Uniformità di campo: differenza HU tra centro e periferia (±ore). Soglia tipica: |ΔHU| ≤ 4 HU.',
+      paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll. (mm)'),P('fov','FOV')],
       defaultRows:[
-        {id:'std',    params:[P('kV',120),P('mA',200),P('kernel','Standard')]},
-        {id:'sharp',  params:[P('kV',120),P('mA',200),P('kernel','Sharp/Bone')]},
-        {id:'smooth', params:[P('kV',120),P('mA',200),P('kernel','Smooth')]},
-        {id:'std80',  params:[P('kV',80), P('mA',200),P('kernel','Standard')]},
-        {id:'std140', params:[P('kV',140),P('mA',200),P('kernel','Standard')]},
+        {id:'unif_1', params:[P('kV',120),P('mA',100),P('coll_mm',10),P('fov','head')]},
       ],
       fields:[
-        { id:'kernel_val', label:'Kernel/kV', unit:'',      type:'text'   },
-        { id:'lp_vis',     label:'LP/cm vis.',unit:'LP/cm', type:'number' },
-        { id:'mtf50',      label:'MTF 50%',   unit:'LP/cm', type:'number' },
-        { id:'mtf10',      label:'MTF 10%',   unit:'LP/cm', type:'number' },
+        { id:'hu_centro', label:'HU centro',  unit:'HU', type:'number' },
+        { id:'hu_3h',     label:'HU ore 3',   unit:'HU', type:'number' },
+        { id:'hu_6h',     label:'HU ore 6',   unit:'HU', type:'number' },
+        { id:'hu_9h',     label:'HU ore 9',   unit:'HU', type:'number' },
+        { id:'hu_12h',    label:'HU ore 12',  unit:'HU', type:'number' },
+        { id:'delta_max', label:'|ΔHU| max',  unit:'HU', type:'number', isUnifDelta:true },
       ],
-      catphType: 'mtf',
-    },
-    {
-      id:'catp_st_lc', tab:'Catphan',
-      title:'Catphan – Basso Contrasto completo (annuale)',
-      desc:'Test completo CTP515 supra-slice e sub-slice, tutti i gruppi di contrasto.',
-      paramFields:[P('kV','kV'),P('mA','mA'),P('cpc','Contrasto %'),P('kernel','Kernel')],
-      defaultRows:[
-        {id:'sup_10', params:[P('kV',120),P('mA',200),P('cpc',1.0),P('kernel','Standard')]},
-        {id:'sup_06', params:[P('kV',120),P('mA',200),P('cpc',0.6),P('kernel','Standard')]},
-        {id:'sup_03', params:[P('kV',120),P('mA',200),P('cpc',0.3),P('kernel','Standard')]},
-        {id:'sub_10', params:[P('kV',120),P('mA',200),P('cpc',1.0),P('kernel','Standard')]},
-        {id:'sub_06', params:[P('kV',120),P('mA',200),P('cpc',0.6),P('kernel','Standard')]},
-        {id:'sub_03', params:[P('kV',120),P('mA',200),P('cpc',0.3),P('kernel','Standard')]},
-      ],
-      fields:[
-        { id:'gruppo',   label:'Gruppo',    unit:'',   type:'text'   },
-        { id:'n_visib',  label:'N° vis.',   unit:'',   type:'number' },
-        { id:'diam_min', label:'Ø min (mm)',unit:'mm', type:'number' },
-      ],
-      catphType: 'lc',
+      isUnif: true,
     },
   ],
-
-
 
 };
 
@@ -1596,9 +1457,29 @@ function renderCard(sec, row) {
       </div>
     `;
 
+  // ───────── LINK BADGE (riga condivisa tra linearità mAs e dose vs kVp) ─────
+  const linkedBadge = (() => {
+    if (sec.id === 'stato_lin_mas' && row.id === 'mas_100')
+      return `<div class="link-badge" title="Questa misura (120 kVp, 100 mA) è il punto di riferimento comune anche per 'Dose al variare dei kVp' (kv_120)">
+        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M4 6h4M7 4l2 2-2 2M5 8l-2-2 2-2"/>
+        </svg>
+        Punto comune – Dose vs kVp (kv_120)
+      </div>`;
+    if (sec.id === 'stato_var_kv' && row.id === 'kv_120')
+      return `<div class="link-badge" title="Questa misura (120 kVp, 100 mA) è il punto di riferimento comune anche per 'Linearità con mAs' (mas_100)">
+        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M4 6h4M7 4l2 2-2 2M5 8l-2-2 2-2"/>
+        </svg>
+        Punto comune – Linearità mAs (mas_100)
+      </div>`;
+    return '';
+  })();
+
   // ───────── RETURN ─────────
   return `
     <div class="mcard ${sClass} ${isAcc ? 'accepted' : ''}" id="${cardId}">
+      ${linkedBadge}
       ${paramsHtml}
       <div class="minputs ${colsClass}">
         ${inputsHtml}
@@ -1724,6 +1605,41 @@ function renderField(secId, rowId, field, currentVal, isAccepted, row) {
     </div>`;
   }
 
+  // Campo calcolato automaticamente (% vs media riproducibilità)
+  if (field.isReprod) {
+    const num = parseFloat(val);
+    const hasVal = !isNaN(num) && val !== '';
+    const ds = hasVal ? getDeltaStatus(Math.abs(num)) : 'none';
+    const color = ds==='ok' ? 'var(--ok)' : ds==='warn' ? 'var(--warn)' : ds==='fail' ? 'var(--fail)' : 'var(--muted)';
+    const display = hasVal ? (num >= 0 ? '+' : '') + num.toFixed(2) + ' %' : '–';
+    return `<div class="igroup">
+      <label class="ilabel">${field.label} <span class="iunit"></span></label>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:5px;
+                  padding:6px 8px;font-family:var(--mono);font-size:.88rem;
+                  color:${color};font-weight:700;min-height:32px;">
+        ${display}
+      </div>
+    </div>`;
+  }
+
+  // Campo calcolato automaticamente (|ΔHU| max uniformità)
+  if (field.isUnifDelta) {
+    const num = parseFloat(val);
+    const hasVal = !isNaN(num) && val !== '';
+    // Soglia: 4 HU warn, 6 HU fail
+    const ds = hasVal ? (Math.abs(num) <= 4 ? 'ok' : Math.abs(num) <= 6 ? 'warn' : 'fail') : 'none';
+    const color = ds==='ok' ? 'var(--ok)' : ds==='warn' ? 'var(--warn)' : ds==='fail' ? 'var(--fail)' : 'var(--muted)';
+    const display = hasVal ? Math.abs(num).toFixed(1) + ' HU' : '–';
+    return `<div class="igroup">
+      <label class="ilabel">${field.label} <span class="iunit">(soglia ≤4 HU)</span></label>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:5px;
+                  padding:6px 8px;font-family:var(--mono);font-size:.88rem;
+                  color:${color};font-weight:700;min-height:32px;">
+        ${display}
+      </div>
+    </div>`;
+  }
+
   const phAttr = prevVal !== '' ? `placeholder="${prevVal}"` : '';
   const titleAttr = prevVal !== '' ? `title="Ultima misura accettata: ${prevVal}"` : '';
   const prevBadge = prevVal !== '' ? `<span class="iprev" title="Ultima: ${prevVal}">↩ ${prevVal}</span>` : '';
@@ -1753,7 +1669,7 @@ function renderDeltaIndicator(sec, vals) {
       <span class="delta-value d-none">–</span>
     </div>`;
   }
-  const delta = Math.abs((a - b) / b * 100);
+  const delta = Math.abs((a - b) / a * 100);  // divisore = CTDIvol_mis, come da foglio Excel
   const ds = getDeltaStatus(delta);
   const barW = Math.min(100, delta / S.settings.threshold_fail * 100 * 0.9);
   return `<div class="delta-row">
@@ -1786,12 +1702,24 @@ function computeStatus(sec, row, vals) {
     const a = parseFloat(vals[fA?.id]);
     const b = parseFloat(vals[fB?.id]);
     if (!isNaN(a) && !isNaN(b) && b !== 0)
-      return getDeltaStatus(Math.abs((a-b)/b*100));
+      return getDeltaStatus(Math.abs((a-b)/a*100));
   }
   if (sec.isColl) {
     const collMeasField = sec.fields.find(f=>f.collMeas);
     if (collMeasField && vals[collMeasField.id] !== undefined && vals[collMeasField.id] !== '')
       return computeCollDelta(row, vals[collMeasField.id]);
+  }
+  // Riproducibilità: colora in base a pct_media calcolata
+  const reprodField = sec.fields.find(f=>f.isReprod);
+  if (reprodField) {
+    const pct = parseFloat(vals[reprodField.id]);
+    if (!isNaN(pct)) return getDeltaStatus(Math.abs(pct));
+  }
+  // Uniformità: colora in base a delta_max
+  const unifField = sec.fields.find(f=>f.isUnifDelta);
+  if (unifField) {
+    const d = parseFloat(vals[unifField.id]);
+    if (!isNaN(d)) return Math.abs(d) <= 4 ? 'ok' : Math.abs(d) <= 6 ? 'warn' : 'fail';
   }
   // Check if any value filled at all
   const hasAny = sec.fields.some(f => vals[f.id] != null && vals[f.id] !== '');
@@ -1851,16 +1779,86 @@ function onInputChange(input, doRefresh = false) {
   // 3️⃣ Salva la versione normalizzata nei dati
   S.cache[`${sec}_${row}`].values[fid] = normalized;
 
-  // 4️⃣ Salvataggio debounced
+  // 4️⃣ Ricalcola % vs media per sezioni con isReprod
+  recomputeReprod(sec);
+  // Ricalcola delta_max per sezioni uniformità
+  recomputeUnif(sec);
+
+  // 5️⃣ Salvataggio debounced
   clearTimeout(input._saveTimer);
   input._saveTimer = setTimeout(() => {
     saveMeasurement(sec, row);
   }, 400);
 
-  // 5️⃣ Refresh SOLO su blur (quando doRefresh = true)
+  // 6️⃣ Refresh SOLO su blur (quando doRefresh = true)
   if (doRefresh) {
     refreshCard(sec, row);
   }
+}
+
+/**
+ * Ricalcola il campo pct_media per tutte le righe di una sezione isReprod.
+ * Formula: (dose_i - media) / media * 100
+ * Aggiorna S.cache e refresha tutte le card della sezione.
+ */
+function recomputeReprod(secId) {
+  const secDef = getSecDef(secId);
+  if (!secDef) return;
+  const reprodField = secDef.fields.find(f => f.isReprod);
+  if (!reprodField) return;
+
+  // Campo sorgente: il primo field NON isReprod (dose_air)
+  const srcField = secDef.fields.find(f => !f.isReprod);
+  if (!srcField) return;
+
+  const rows = getSectionRows(secDef);
+
+  // Leggi tutti i valori sorgente disponibili
+  const vals = rows.map(r => {
+    const v = parseFloat(S.cache[`${secId}_${r.id}`]?.values?.[srcField.id]);
+    return isNaN(v) ? null : v;
+  });
+
+  const present = vals.filter(v => v !== null);
+  if (present.length === 0) return;
+
+  const media = present.reduce((s, v) => s + v, 0) / present.length;
+  if (media === 0) return;
+
+  // Aggiorna pct_media in cache per ogni riga e salva
+  rows.forEach((r, i) => {
+    if (vals[i] === null) return;
+    const pct = +((vals[i] - media) / media * 100).toFixed(3);
+    ensureCache(secId, r.id);
+    S.cache[`${secId}_${r.id}`].values[reprodField.id] = String(pct);
+    // Salva e ri-renderizza la card
+    saveMeasurement(secId, r.id);
+    refreshCard(secId, r.id);
+  });
+}
+
+/**
+ * Ricalcola il campo delta_max per la sezione uniformità (isUnif).
+ * delta_max = max(|HU_periferia - HU_centro|) tra le 4 posizioni periferiche.
+ */
+function recomputeUnif(secId) {
+  const secDef = getSecDef(secId);
+  if (!secDef?.isUnif) return;
+  const rows = getSectionRows(secDef);
+  rows.forEach(r => {
+    const v = S.cache[`${secId}_${r.id}`]?.values || {};
+    const centro = parseFloat(v.hu_centro);
+    if (isNaN(centro)) return;
+    const periph = ['hu_3h','hu_6h','hu_9h','hu_12h']
+      .map(k => parseFloat(v[k]))
+      .filter(n => !isNaN(n));
+    if (!periph.length) return;
+    const deltaMax = +Math.max(...periph.map(p => Math.abs(p - centro))).toFixed(1);
+    ensureCache(secId, r.id);
+    S.cache[`${secId}_${r.id}`].values.delta_max = String(deltaMax);
+    saveMeasurement(secId, r.id);
+    refreshCard(secId, r.id);
+  });
 }
 function setBool(secId, rowId, fid, val) {
   ensureCache(secId, rowId);
@@ -2067,159 +2065,16 @@ async function saveSettings() {
   if (S.activeTab) renderActiveTab(); // Refresh to update delta colors
 }
 
-
-// ═══════════════════════════════════════════════════════════════════════
-// REPORT CHARTS  (Chart.js 4)
-// ═══════════════════════════════════════════════════════════════════════
-function buildReportCharts() {
-  if (window._rptCharts) { window._rptCharts.forEach(c => c.destroy()); }
-  window._rptCharts = [];
-  const defs = QC_DEF[S.controlType] || [];
-  const isDark  = !document.documentElement.classList.contains('light');
-  const gColor  = isDark ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.07)';
-  const tColor  = isDark ? '#9ba8c0' : '#6b7a99';
-
-  function mkChart(id, cfg) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const c = new Chart(el.getContext('2d'), cfg);
-    window._rptCharts.push(c);
-  }
-  const base = {
-    responsive:true, maintainAspectRatio:true,
-    plugins:{ legend:{ labels:{ color:tColor, font:{size:11} } } },
-    scales:{
-      x:{ ticks:{color:tColor,font:{size:10}}, grid:{color:gColor} },
-      y:{ ticks:{color:tColor,font:{size:10}}, grid:{color:gColor} }
-    }
-  };
-
-  // ── CTDIvol bar chart ────────────────────────────────────────────────
-  const doseSec = defs.find(s => s.fields && s.fields.some(f=>f.id==='ctdi_vol'));
-  if (doseSec) {
-    const rows = getSectionRows(doseSec);
-    const kvSet = [...new Set(rows.map(r=>r.params.find(p=>p.id==='kV')?.val).filter(Boolean))];
-    const measVals = kvSet.map(kv => {
-      const r = rows.find(row=>row.params.find(p=>p.id==='kV')?.val==kv);
-      return parseFloat(S.cache[`${doseSec.id}_${r?.id}`]?.values?.ctdi_vol) || null;
-    });
-    const tcVals = kvSet.map(kv => {
-      const r = rows.find(row=>row.params.find(p=>p.id==='kV')?.val==kv);
-      return parseFloat(S.cache[`${doseSec.id}_${r?.id}`]?.values?.ctdi_vol_tc) || null;
-    });
-    if (measVals.some(v=>v!=null)) mkChart('chart-ctdi', {
-      type:'bar',
-      data:{ labels:kvSet.map(k=>k+' kV'),
-        datasets:[
-          {label:'CTDIvol mis. (mGy)', data:measVals, backgroundColor:'rgba(77,159,255,.7)', borderColor:'#4d9fff', borderWidth:1},
-          {label:'CTDIvol TC display', data:tcVals, type:'line', borderColor:'#f0a500', backgroundColor:'transparent', borderWidth:2, pointRadius:4, tension:.3},
-        ]},
-      options:base
-    });
-  }
-
-  // ── Catphan HU bar chart ──────────────────────────────────────────────
-  const huSec = defs.find(s=>s.catphType==='hu');
-  if (huSec) {
-    const rows = getSectionRows(huSec);
-    const labels=[], mis=[], rif=[];
-    rows.forEach(row=>{
-      const v = S.cache[`${huSec.id}_${row.id}`]?.values||{};
-      labels.push(v.inserto||row.id);
-      mis.push(parseFloat(v.hu_mis)||null);
-      rif.push(parseFloat(v.hu_rif)||null);
-    });
-    if (mis.some(v=>v!=null)) mkChart('chart-hu', {
-      type:'bar',
-      data:{ labels,
-        datasets:[
-          {label:'HU misurato', data:mis, backgroundColor:'rgba(77,159,255,.7)', borderColor:'#4d9fff', borderWidth:1},
-          {label:'HU riferimento', data:rif, type:'line', borderColor:'#34c264', backgroundColor:'transparent', borderWidth:2, pointRadius:5},
-        ]},
-      options:base
-    });
-  }
-
-  // ── Uniformità: HU & SD bar ────────────────────────────────────────────
-  const unifSec = defs.find(s=>s.catphType==='unif');
-  if (unifSec) {
-    const rows = getSectionRows(unifSec);
-    const labels=[], huVals=[], sdVals=[];
-    rows.forEach(row=>{
-      const v = S.cache[`${unifSec.id}_${row.id}`]?.values||{};
-      labels.push(v.posiz||v.kv_lbl||row.id);
-      huVals.push(parseFloat(v.hu_val)||parseFloat(v.hu_ctr)||null);
-      sdVals.push(parseFloat(v.sd_val)||parseFloat(v.sd_ctr)||null);
-    });
-    if (huVals.some(v=>v!=null)) mkChart('chart-unif', {
-      type:'bar',
-      data:{ labels,
-        datasets:[
-          {label:'HU acqua', data:huVals, backgroundColor:'rgba(52,194,100,.6)', borderColor:'#34c264', borderWidth:1},
-          {label:'SD (rumore, HU)', data:sdVals, type:'line', borderColor:'#f04f4f', backgroundColor:'transparent', borderWidth:2, pointRadius:4},
-        ]},
-      options:base
-    });
-  }
-
-  // ── MTF / risoluzione ──────────────────────────────────────────────────
-  const resSec = defs.find(s=>s.catphType==='mtf');
-  if (resSec) {
-    const rows = getSectionRows(resSec);
-    const labels=[], lpv=[], m50=[], m10=[];
-    rows.forEach(row=>{
-      const v = S.cache[`${resSec.id}_${row.id}`]?.values||{};
-      labels.push(v.kernel_val||row.params.find(p=>p.id==='kernel')?.val||row.id);
-      lpv.push(parseFloat(v.lp_vis)||null);
-      m50.push(parseFloat(v.mtf50)||null);
-      m10.push(parseFloat(v.mtf10)||null);
-    });
-    if (m50.some(v=>v!=null)||lpv.some(v=>v!=null)) mkChart('chart-mtf', {
-      type:'bar',
-      data:{ labels,
-        datasets:[
-          {label:'LP/cm visive', data:lpv, backgroundColor:'rgba(77,159,255,.6)', borderColor:'#4d9fff', borderWidth:1},
-          {label:'MTF 50%',      data:m50, backgroundColor:'rgba(240,165,0,.6)',  borderColor:'#f0a500', borderWidth:1},
-          {label:'MTF 10%',      data:m10, backgroundColor:'rgba(240,79,79,.6)',  borderColor:'#f04f4f', borderWidth:1},
-        ]},
-      options:base
-    });
-  }
-
-  // ── CTDIvol vs mA (linearità) ──────────────────────────────────────────
-  const linSec = defs.find(s=>s.id==='stato_lin_mas');
-  if (linSec) {
-    const rows = getSectionRows(linSec);
-    const pts = rows.map(row=>{
-      const ma = parseFloat(row.params.find(p=>p.id==='mA')?.val);
-      const cv = parseFloat(S.cache[`${linSec.id}_${row.id}`]?.values?.ctdi_vol);
-      return (!isNaN(ma)&&!isNaN(cv)) ? {x:ma,y:cv} : null;
-    }).filter(Boolean).sort((a,b)=>a.x-b.x);
-    if (pts.length>1) mkChart('chart-noise', {
-      type:'line',
-      data:{ datasets:[{label:'CTDIvol vs mA', data:pts, borderColor:'#4d9fff', backgroundColor:'rgba(77,159,255,.12)', borderWidth:2, pointRadius:5, fill:true}] },
-      options:{...base, scales:{
-        x:{...base.scales.x, title:{display:true,text:'mA',color:tColor}},
-        y:{...base.scales.y, title:{display:true,text:'CTDIvol (mGy)',color:tColor}}
-      }}
-    });
-  }
-
-  // Hide empty chart boxes
-  ['ctdi','hu','unif','mtf','noise'].forEach(id=>{
-    const box = document.getElementById('box-chart-'+id);
-    if (box) box.style.display = (window._rptCharts.length > 0 ? '' : 'none');
-  });
-}
-
 // ═══════════════════════════════════════════════════════════════════════
 // REPORT
 // ═══════════════════════════════════════════════════════════════════════
 function showReport() {
   if (!S.control) return;
-  renderReport();
+  loadSignatures().then(() => {
+    renderReport();
+    renderReportCharts();
+  });
   showView('report');
-  setTimeout(buildReportCharts, 80);
 }
 
 function renderReport() {
@@ -2262,7 +2117,7 @@ function renderReport() {
         const fB = sec.fields.find(f=>f.isDeltaB);
         const a = parseFloat(vals[fA?.id]);
         const b = parseFloat(vals[fB?.id]);
-        const d = (!isNaN(a)&&!isNaN(b)&&b!==0) ? Math.abs((a-b)/b*100).toFixed(2)+'%' : '–';
+        const d = (!isNaN(a)&&!isNaN(b)&&a!==0) ? Math.abs((a-b)/a*100).toFixed(2)+'%' : '–';
         deltaTd = `<td class="s-${status}">${d}</td>`;
       }
       const statusCell = `<td><span class="badge badge-${status==='none'?'':status}" style="${status==='none'?'color:var(--muted)':''}">${{ok:'Conforme',warn:'Borderline',fail:'Non conf.',none:'–'}[status]||'–'}</span></td>`;
@@ -2322,17 +2177,10 @@ function renderReport() {
       </div>
     </div>
 
-    <div style="margin-bottom:24px">
-      <div class="rpt-sec-title">📊 Grafici di riepilogo</div>
-      <div class="rpt-chart-grid">
-        <div class="rpt-chart-box" id="box-chart-ctdi"><div class="rpt-chart-title">CTDIvol misurato vs display (per kV)</div><canvas id="chart-ctdi" height="200"></canvas></div>
-        <div class="rpt-chart-box" id="box-chart-hu"><div class="rpt-chart-title">HU Linearity – Catphan</div><canvas id="chart-hu" height="200"></canvas></div>
-        <div class="rpt-chart-box" id="box-chart-unif"><div class="rpt-chart-title">Uniformità &amp; Rumore – Catphan</div><canvas id="chart-unif" height="200"></canvas></div>
-        <div class="rpt-chart-box" id="box-chart-mtf"><div class="rpt-chart-title">Risoluzione Spaziale MTF – Catphan</div><canvas id="chart-mtf" height="200"></canvas></div>
-        <div class="rpt-chart-box" id="box-chart-noise"><div class="rpt-chart-title">CTDIvol vs mA (linearità dose)</div><canvas id="chart-noise" height="200"></canvas></div>
-      </div>
-    </div>
     ${sectionsHtml}
+
+    <!-- ── Grafici SVG (iniettati da renderReportCharts) ── -->
+    <div id="rpt-charts-container"></div>
 
     <div class="conc-grid no-print">
       <div class="conc-box">
@@ -2374,12 +2222,24 @@ function renderReport() {
           onchange="saveNotes()">${c.notes||''}</textarea>
       </div>
 
+      <!-- Firme editabili – salvate in DB (tabella signatures) -->
       <div class="sign-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-        ${['Lo Specialista in Fisica Medica','Il Responsabile dell\'impianto radiologico'].map(t=>`
-          <div class="box">
-            <div style="font-size:.75rem;color:var(--muted);margin-bottom:32px">${t}</div>
-            <div style="border-top:1px solid var(--border);padding-top:6px;font-size:.75rem;color:var(--muted)">Firma e timbro</div>
-          </div>`).join('')}
+        <div class="box">
+          <div style="font-size:.75rem;color:var(--muted);margin-bottom:6px">Lo Specialista in Fisica Medica</div>
+          <input id="sign-physicist" class="sign-field" type="text"
+            placeholder="Nome e Cognome"
+            value="${S._signatures?.physicist||''}"
+            onchange="saveSignatures()">
+          <div style="border-top:1px solid var(--border);padding-top:6px;font-size:.75rem;color:var(--muted);margin-top:26px">Firma e timbro</div>
+        </div>
+        <div class="box">
+          <div style="font-size:.75rem;color:var(--muted);margin-bottom:6px">Il Responsabile dell'impianto radiologico</div>
+          <input id="sign-responsible" class="sign-field" type="text"
+            placeholder="Nome e Cognome"
+            value="${S._signatures?.responsible||''}"
+            onchange="saveSignatures()">
+          <div style="border-top:1px solid var(--border);padding-top:6px;font-size:.75rem;color:var(--muted);margin-top:26px">Firma e timbro</div>
+        </div>
       </div>
 
       <!-- Footer di stampa: visibile solo su carta -->
@@ -2459,34 +2319,704 @@ document.getElementById('modal-confirm').querySelector('.btn-ghost').addEventLis
 // ═══════════════════════════════════════════════════════════════════════
 function v(id) { return document.getElementById(id)?.value?.trim() || ''; }
 
+// ═══════════════════════════════════════════════════════════════════════
+// SIGNATURES – Specialista e Responsabile (persistiti in DB)
+// ═══════════════════════════════════════════════════════════════════════
+async function loadSignatures() {
+  if (!S.control) return;
+  try {
+    S._signatures = await api.get(`/api/signatures?control_id=${S.control.id}`);
+  } catch { S._signatures = { physicist: '', responsible: '' }; }
+}
+
+async function saveSignatures() {
+  if (!S.control) return;
+  const physicist   = document.getElementById('sign-physicist')?.value  || '';
+  const responsible = document.getElementById('sign-responsible')?.value || '';
+  S._signatures = { physicist, responsible };
+  await api.put('/api/signatures', { control_id: S.control.id, physicist, responsible });
+}
 
 // ═══════════════════════════════════════════════════════════════════════
-// THEME TOGGLE
+// DEMO DATA – popola misure realistiche per il controllo corrente
 // ═══════════════════════════════════════════════════════════════════════
-function toggleTheme() {
-  const isLight = document.documentElement.classList.toggle('light');
-  const btn = document.getElementById('btn-theme');
-  if (btn) btn.textContent = isLight ? '🌞' : '🌙';
-  try { localStorage.setItem('tcqc_theme', isLight ? 'light' : 'dark'); } catch(e) {}
-  if (document.getElementById('view-report').classList.contains('active')) {
-    setTimeout(buildReportCharts, 60);
+async function seedDemoData() {
+  if (!S.machine) { alert('Seleziona prima una macchina'); return; }
+
+  // Mostra feedback immediato
+  const btn = document.getElementById('btn-demo');
+  const origText = btn.textContent;
+  btn.textContent = '⏳ Creando demo…';
+  btn.disabled = true;
+
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const iso   = s => new Date().toISOString();
+
+    // ── Crea i tre controlli se non esistono già ──
+    const types = ['accettazione', 'costanza', 'stato'];
+    const created = {};
+    for (const t of types) {
+      const existing = await api.get(`/api/controls?machine_id=${S.machine.id}&type=${t}&limit=1`);
+      if (existing.length) {
+        created[t] = existing[0];
+      } else {
+        created[t] = await api.post('/api/controls', {
+          machine_id: S.machine.id, type: t, date: today,
+          operators: 'Demo Operator', tube_serial: 'SN-DEMO-001',
+          protocol: 'Philips iDose4 L4',
+        });
+      }
+    }
+
+    // Helper: salva misura accettata
+    const saveMeas = async (ctrlId, secId, rowId, values) => {
+      await api.post('/api/measurements', {
+        control_id: ctrlId, section_id: secId, row_id: rowId,
+        values, accepted: true, accepted_at: iso(),
+      });
+    };
+
+    // ────────── ACCETTAZIONE ──────────
+    const accId = created['accettazione'].id;
+
+    // dose_aria_ass: 6 righe, kV: 120,120,120,80,100,140
+    const doseAirAss = [
+      { id:'r1', ct_exp: 14.2, time_ms: 1000 },
+      { id:'r2', ct_exp: 14.3, time_ms: 1000 },
+      { id:'r3', ct_exp: 14.1, time_ms: 1000 },
+      { id:'r4', ct_exp:  6.8, time_ms: 1000 },
+      { id:'r5', ct_exp: 10.3, time_ms: 1000 },
+      { id:'r6', ct_exp: 19.7, time_ms: 1000 },
+    ];
+    for (const r of doseAirAss)
+      await saveMeas(accId, 'dose_aria_ass', r.id, { ct_exp: r.ct_exp, time_ms: r.time_ms });
+
+    // dose_aria_sp
+    const doseAirSp = [
+      { id:'r1', ctdi100: 13.8, ctdi_vol_tc: 13.5 },
+      { id:'r2', ctdi100: 14.0, ctdi_vol_tc: 13.7 },
+      { id:'r3', ctdi100: 13.9, ctdi_vol_tc: 13.6 },
+      { id:'r4', ctdi100:  6.5, ctdi_vol_tc:  6.3 },
+      { id:'r5', ctdi100:  9.9, ctdi_vol_tc:  9.7 },
+      { id:'r6', ctdi100: 18.9, ctdi_vol_tc: 18.5 },
+    ];
+    for (const r of doseAirSp)
+      await saveMeas(accId, 'dose_aria_sp', r.id, { ctdi100: r.ctdi100, ctdi_vol_tc: r.ctdi_vol_tc });
+
+    // df_head_ass: 20 righe (4 kV × 5 posizioni)
+    const kvList = [80, 100, 120, 140];
+    const pos5   = ['centro','ore_3','ore_6','ore_9','ore_12'];
+    const baseCtdi = { 80: 5.8, 100: 9.2, 120: 13.5, 140: 18.9 };
+    const noise    = () => (Math.random() - 0.5) * 0.4;
+    for (const kv of kvList) {
+      for (const pos of pos5) {
+        const id  = `${kv}_${pos}`;
+        const b   = baseCtdi[kv];
+        const c100 = +(b + noise()).toFixed(2);
+        const cw   = +(c100 * 0.72 + noise()).toFixed(2);
+        const cvol = +(cw * 0.85 + noise()).toFixed(2);
+        const cvtc = +(cvol + noise() * 0.3).toFixed(2);
+        await saveMeas(accId, 'df_head_ass', id, { ctdi100: c100, ctdi_w: cw, ctdi_vol: cvol, ctdi_vol_tc: cvtc });
+      }
+    }
+
+    // collimazione
+    const collNoms = [1.25, 2.5, 5, 10, 20, 40];
+    for (const n of collNoms) {
+      const id = `c${String(n).replace('.','_')}`;
+      const mis = +(n * (1 + (Math.random() - 0.5) * 0.03)).toFixed(2);
+      await saveMeas(accId, 'collimazione', id, { coll_mis: mis, efficienza: 'OK' });
+    }
+
+    // ric_iter_1: rumore decresce con livello
+    const iter1Levels = [0,10,20,30,40,50,60,70,80,90,100];
+    for (const l of iter1Levels) {
+      const id = `ri1_${l}`;
+      const rumore = +(22 - l * 0.12 + noise()).toFixed(1);
+      await saveMeas(accId, 'ric_iter_1', id, { mas: 200, rumore });
+    }
+
+    // ────────── COSTANZA ──────────
+    const cosId = created['costanza'].id;
+
+    // riprod_ctdi: 3 misure quasi identiche – pct_media calcolata sulla media reale
+    const ripDoses = [1,2,3].map(() => +(14.2 + noise() * 0.4).toFixed(2));
+    const ripMedia = ripDoses.reduce((s,v)=>s+v,0) / ripDoses.length;
+    for (const [idx, n] of [[0,1],[1,2],[2,3]]) {
+      const pct = +((ripDoses[idx] - ripMedia) / ripMedia * 100).toFixed(3);
+      await saveMeas(cosId, 'riprod_ctdi', `rip_${n}`, { dose_air: ripDoses[idx], pct_media: pct });
+    }
+
+    // var_kv
+    for (const kv of [80,100,120,140]) {
+      const b   = baseCtdi[kv];
+      const c100 = +(b + noise()).toFixed(2);
+      const cph  = +(c100 * 0.72 + noise()).toFixed(2);
+      const cvtc = +(cph * 0.97 + noise() * 0.2).toFixed(2);
+      await saveMeas(cosId, 'var_kv', `vkv_${kv}`, { ctdi100: c100, ctdi100_ph: cph, ctdi_vol_tc: cvtc });
+    }
+
+    // ────────── STATO ──────────
+    const statId = created['stato'].id;
+
+    // stato_lin_mas: CTDIvol varia con mAs
+    const masRows = [
+      { id:'mas_100', mA:100, base:1.00 },
+      { id:'mas_50',  mA:50,  base:0.50 },
+      { id:'mas_200', mA:200, base:1.97 },
+      { id:'mas_300', mA:300, base:2.95 },
+    ];
+    for (const r of masRows) {
+      const cvol = +(13.5 * r.base + noise()).toFixed(2);
+      const cvtc = +(cvol + noise() * 0.3).toFixed(2);
+      await saveMeas(statId, 'stato_lin_mas', r.id, {
+        ctdi100: +(cvol*1.18+noise()).toFixed(2), ctdi_w: +(cvol*1.03+noise()).toFixed(2),
+        ctdi_vol: cvol, ctdi_vol_tc: cvtc,
+      });
+    }
+
+    // stato_var_kv
+    for (const kv of [80,100,120,140]) {
+      const b    = baseCtdi[kv];
+      const cvol = +(b * 0.72 + noise()).toFixed(2);
+      const cvtc = +(cvol + noise() * 0.3).toFixed(2);
+      await saveMeas(statId, 'stato_var_kv', `kv_${kv}`, {
+        ctdi100: +(b+noise()).toFixed(2), ctdi_w: +(b*0.72+noise()).toFixed(2),
+        ctdi_vol: cvol, ctdi_vol_tc: cvtc,
+      });
+    }
+
+    // stato_coll_pitch
+    const cpRows = [
+      { id:'coll_40',       cvol: 10.8, cvtc: 10.6 },
+      { id:'pitch_042',     cvol: 30.1, cvtc: 29.5 },
+      { id:'coll40_pit042', cvol: 23.4, cvtc: 23.0 },
+    ];
+    for (const r of cpRows)
+      await saveMeas(statId, 'stato_coll_pitch', r.id, {
+        ctdi100: +(r.cvol*1.18+noise()).toFixed(2), ctdi_w: +(r.cvol*1.03+noise()).toFixed(2),
+        ctdi_vol: r.cvol, ctdi_vol_tc: r.cvtc,
+      });
+
+    // stato_body
+    for (const kv of [80,100,120,140]) {
+      const cvol = +(baseCtdi[kv] * 0.56 + noise()).toFixed(2);
+      const cvtc = +(cvol + noise() * 0.3).toFixed(2);
+      await saveMeas(statId, 'stato_body', `body_kv${kv}`, {
+        ctdi100: +(cvol*1.18+noise()).toFixed(2), ctdi_w: +(cvol*1.03+noise()).toFixed(2),
+        ctdi_vol: cvol, ctdi_vol_tc: cvtc,
+      });
+    }
+
+    // stato_riprod: 3 misure riproducibilità dose (Costanza in Stato)
+    const statRipDoses = [1,2,3].map(() => +(14.2 + noise() * 0.3).toFixed(2));
+    const statRipMedia = statRipDoses.reduce((s,v)=>s+v,0) / statRipDoses.length;
+    for (const [idx, n] of [[0,1],[1,2],[2,3]]) {
+      const pct = +((statRipDoses[idx] - statRipMedia) / statRipMedia * 100).toFixed(3);
+      await saveMeas(statId, 'stato_riprod', `srip_${n}`, { dose_air: statRipDoses[idx], pct_media: pct });
+    }
+
+    // stato_rumore: fantoccio uniforme, 5 posizioni
+    const huBase = 2.1; // HU acqua ideale ~0, nella pratica piccola offset
+    const rumorePosIds = ['c','3h','6h','9h','12h'];
+    for (const pid of rumorePosIds) {
+      await saveMeas(statId, 'stato_rumore', `rumore_${pid}`, {
+        hu_mean: +(huBase + noise() * 0.5).toFixed(1),
+        hu_std:  +(5.8 + noise() * 0.6).toFixed(1),
+      });
+    }
+
+    // stato_uniformita: delta_max calcolato automaticamente
+    const huCentro = +(1.8 + noise() * 0.4).toFixed(1);
+    const huPeriph = { hu_3h: +(3.2+noise()*0.4).toFixed(1), hu_6h: +(4.1+noise()*0.4).toFixed(1), hu_9h: +(2.9+noise()*0.4).toFixed(1), hu_12h: +(3.5+noise()*0.4).toFixed(1) };
+    const deltaMax = +Math.max(...Object.values(huPeriph).map(p => Math.abs(p - huCentro))).toFixed(1);
+    await saveMeas(statId, 'stato_uniformita', 'unif_1', {
+      hu_centro: huCentro, ...huPeriph, delta_max: String(deltaMax),
+    });
+
+    // ── Segna i controlli come completati ──
+    for (const t of types)
+      await api.put(`/api/controls/${created[t].id}`, { status: 'complete' });
+
+    // ── Apri il controllo corrente e vai al report ──
+    S.controlType = S.controlType || 'accettazione';
+    await loadSession(created[S.controlType].id);
+
+    btn.textContent = '✓ Demo caricata!';
+    setTimeout(() => { btn.textContent = origText; btn.disabled = false; }, 2000);
+
+  } catch(e) {
+    console.error(e);
+    btn.textContent = origText;
+    btn.disabled = false;
+    alert('Errore demo: ' + e.message);
   }
 }
-function applyStoredTheme() {
-  try {
-    if (localStorage.getItem('tcqc_theme') === 'light') {
-      document.documentElement.classList.add('light');
-      const btn = document.getElementById('btn-theme');
-      if (btn) btn.textContent = '🌞';
+
+// ═══════════════════════════════════════════════════════════════════════
+// SVG CHARTS – Grafici ispirati a Excel nel report
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Costruisce un grafico SVG generico – versione migliorata.
+ * @param {object} cfg - { title, type:'line'|'bar'|'scatter', labels, datasets,
+ *                         yLabel, width, height, warnLine, failLine, refLine }
+ * @returns {string} HTML del .rpt-chart-box
+ */
+function buildSvgChart(cfg) {
+  const W = cfg.width  || 380;
+  const H = cfg.height || 210;
+  const PAD = { top: 22, right: 20, bottom: 44, left: 52 };
+  const cW = W - PAD.left - PAD.right;
+  const cH = H - PAD.top  - PAD.bottom;
+
+  // Raccolta valori per scala Y
+  const allVals = cfg.datasets.flatMap(d => d.data.filter(v => v != null && !isNaN(v)));
+  if (!allVals.length) return '';
+
+  // Includi warnLine/failLine/refLine nella scala
+  const refVals = [cfg.warnLine, cfg.failLine, cfg.refLine].filter(v => v != null);
+  const scalVals = [...allVals, ...refVals];
+
+  let yMin = Math.min(...scalVals);
+  let yMax = Math.max(...scalVals);
+  const yPad = (yMax - yMin) * 0.18 || 1;
+  yMin = Math.floor(yMin - yPad);
+  yMax = Math.ceil(yMax  + yPad);
+  const yRange = yMax - yMin || 1;
+
+  const xCount = cfg.labels.length;
+  const xStep  = cW / Math.max(xCount - 1, 1);
+  const barW   = Math.min(28, cW / xCount * 0.55);
+
+  const toX = i  => PAD.left + (cfg.type === 'bar' ? (i + 0.5) * cW / xCount : i * xStep);
+  const toY = v  => PAD.top  + cH * (1 - (v - yMin) / yRange);
+
+  // ─── Sfondo area plot ───
+  const plotBg = `<rect x="${PAD.left}" y="${PAD.top}" width="${cW}" height="${cH}"
+    fill="rgba(255,255,255,0.015)" rx="2"/>`;
+
+  // ─── Grid lines & Y labels ───
+  const gridLines = 5;
+  let grid = '';
+  for (let g = 0; g <= gridLines; g++) {
+    const vy  = yMin + yRange * g / gridLines;
+    const cy  = toY(vy);
+    const lbl = Math.abs(vy) >= 100 ? vy.toFixed(0) : Math.abs(vy) >= 10 ? vy.toFixed(1) : vy.toFixed(2);
+    const isBaseline = g === 0;
+    grid += `<line x1="${PAD.left}" y1="${cy.toFixed(1)}" x2="${(PAD.left+cW).toFixed(1)}" y2="${cy.toFixed(1)}"
+               stroke="${isBaseline ? '#3a4257' : '#2a3048'}" stroke-width="${isBaseline?'1.5':'0.8'}"
+               stroke-dasharray="${isBaseline ? 'none' : '3,4'}"/>
+             <text x="${(PAD.left-7).toFixed(1)}" y="${(cy+3.5).toFixed(1)}" text-anchor="end"
+               fill="#6a789a" font-size="9.5" font-family="'Cascadia Code','Consolas',monospace">${lbl}</text>`;
+  }
+
+  // ─── X labels ───
+  let xLabels = '';
+  cfg.labels.forEach((lbl, i) => {
+    xLabels += `<text x="${toX(i).toFixed(1)}" y="${(PAD.top+cH+16).toFixed(1)}" text-anchor="middle"
+      fill="#6a789a" font-size="9.5" font-family="'Cascadia Code','Consolas',monospace">${lbl}</text>`;
+  });
+
+  // ─── Y axis label ───
+  const yAxisLabel = cfg.yLabel
+    ? `<text x="10" y="${(PAD.top + cH/2).toFixed(1)}" text-anchor="middle"
+         fill="#6a789a" font-size="9.5" font-family="sans-serif"
+         transform="rotate(-90,10,${(PAD.top + cH/2).toFixed(1)})">${cfg.yLabel}</text>`
+    : '';
+
+  // ─── Axes ───
+  const axes = `
+    <line x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top+cH}" stroke="#3a4257" stroke-width="1.5"/>
+    <line x1="${PAD.left}" y1="${PAD.top+cH}" x2="${PAD.left+cW}" y2="${PAD.top+cH}" stroke="#3a4257" stroke-width="1.5"/>`;
+
+  // ─── Reference / threshold lines ───
+  let bands = '';
+  if (cfg.refLine != null) {
+    const cy = toY(cfg.refLine);
+    bands += `<line x1="${PAD.left}" y1="${cy.toFixed(1)}" x2="${(PAD.left+cW).toFixed(1)}" y2="${cy.toFixed(1)}"
+               stroke="#4d9fff" stroke-width="1" stroke-dasharray="5,3" opacity="0.6"/>
+              <text x="${(PAD.left+cW+2).toFixed(1)}" y="${(cy+3).toFixed(1)}" fill="#4d9fff" font-size="8">rif</text>`;
+  }
+  if (cfg.warnLine != null) {
+    const cy = toY(cfg.warnLine);
+    bands += `<line x1="${PAD.left}" y1="${cy.toFixed(1)}" x2="${(PAD.left+cW).toFixed(1)}" y2="${cy.toFixed(1)}"
+               stroke="#f0a500" stroke-width="1" stroke-dasharray="4,3" opacity="0.75"/>
+              <text x="${(PAD.left+cW+2).toFixed(1)}" y="${(cy+3).toFixed(1)}" fill="#f0a500" font-size="8">±w</text>`;
+  }
+  if (cfg.failLine != null) {
+    const cy = toY(cfg.failLine);
+    bands += `<line x1="${PAD.left}" y1="${cy.toFixed(1)}" x2="${(PAD.left+cW).toFixed(1)}" y2="${cy.toFixed(1)}"
+               stroke="#f04f4f" stroke-width="1" stroke-dasharray="4,3" opacity="0.75"/>
+              <text x="${(PAD.left+cW+2).toFixed(1)}" y="${(cy+3).toFixed(1)}" fill="#f04f4f" font-size="8">±f</text>`;
+  }
+
+  // ─── Color palette ───
+  const PALETTE = ['#4d9fff','#34c264','#f0a500','#f04f4f','#a78bfa','#38bdf8','#fb923c'];
+
+  // ─── Dataset rendering ───
+  let series = '';
+  let legendItems = '';
+
+  cfg.datasets.forEach((ds, di) => {
+    const col = ds.color || PALETTE[di % PALETTE.length];
+    const nDs = cfg.datasets.length;
+
+    if (cfg.type === 'bar') {
+      const totalBarW = barW * nDs + (nDs - 1) * 3;
+      const startOffset = -totalBarW / 2 + di * (barW + 3);
+      ds.data.forEach((v, i) => {
+        if (v == null || isNaN(v)) return;
+        const bx = toX(i) + startOffset;
+        const by = toY(v);
+        const bh = Math.max(1, (PAD.top + cH) - by);
+        const vLbl = Math.abs(v) >= 10 ? v.toFixed(1) : v.toFixed(2);
+        series += `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}"
+                     fill="${col}" opacity="0.85" rx="2">
+                     <title>${cfg.labels[i]}: ${v}</title>
+                   </rect>
+                   <text x="${(bx + barW/2).toFixed(1)}" y="${(by - 3).toFixed(1)}" text-anchor="middle"
+                     fill="${col}" font-size="8" font-family="'Cascadia Code','Consolas',monospace">${vLbl}</text>`;
+      });
+    } else {
+      // Line + filled area under first dataset
+      const pts = ds.data.map((v, i) => v != null && !isNaN(v) ? [toX(i), toY(v)] : null).filter(Boolean);
+      if (pts.length > 1) {
+        if (di === 0 && cfg.fillArea) {
+          const areaPath = `M${pts[0][0].toFixed(1)},${(PAD.top+cH).toFixed(1)} ` +
+            pts.map(([x,y]) => `L${x.toFixed(1)},${y.toFixed(1)}`).join(' ') +
+            ` L${pts[pts.length-1][0].toFixed(1)},${(PAD.top+cH).toFixed(1)} Z`;
+          series += `<path d="${areaPath}" fill="${col}" opacity="0.07"/>`;
+        }
+        series += `<polyline points="${pts.map(([x,y])=>`${x.toFixed(1)},${y.toFixed(1)}`).join(' ')}"
+                     fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+      }
+      // Markers + tooltip
+      ds.data.forEach((v, i) => {
+        if (v == null || isNaN(v)) return;
+        const cx = toX(i), cy = toY(v);
+        const vLbl = Math.abs(v) >= 10 ? v.toFixed(1) : v.toFixed(2);
+        series += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4" fill="${col}" stroke="#0f1117" stroke-width="1.2">
+                     <title>${cfg.labels[i]}: ${v}</title>
+                   </circle>`;
+        // Value labels for small datasets
+        if (xCount <= 6) {
+          series += `<text x="${cx.toFixed(1)}" y="${(cy - 7).toFixed(1)}" text-anchor="middle"
+                       fill="${col}" font-size="8.5" font-family="'Cascadia Code','Consolas',monospace">${vLbl}</text>`;
+        }
+      });
     }
-  } catch(e) {}
+
+    // Legend
+    if (nDs > 1) {
+      const legsPerRow = 3;
+      const lRow = Math.floor(di / legsPerRow);
+      const lCol = di % legsPerRow;
+      const lx = PAD.left + lCol * (cW / legsPerRow);
+      const ly = H - 8 + lRow * 11;
+      legendItems += `<rect x="${lx.toFixed(1)}" y="${(ly-6).toFixed(1)}" width="10" height="6" fill="${col}" rx="1"/>
+                      <text x="${(lx+13).toFixed(1)}" y="${ly.toFixed(1)}" fill="#7a86a0" font-size="8.5"
+                        font-family="'Cascadia Code','Consolas',monospace">${ds.label||'Serie '+(di+1)}</text>`;
+    }
+  });
+
+  const svgStr = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">
+    ${plotBg}${yAxisLabel}${grid}${bands}${axes}${series}${xLabels}${legendItems}
+  </svg>`;
+
+  return `<div class="rpt-chart-box">
+    <div class="rpt-chart-title">📊 ${cfg.title}</div>
+    ${svgStr}
+  </div>`;
+}
+
+/**
+ * Genera e inietta i grafici SVG nel div #rpt-charts-container
+ * in base al tipo di controllo corrente e ai dati in S.cache
+ */
+function renderReportCharts() {
+  const container = document.getElementById('rpt-charts-container');
+  if (!container || !S.control) return;
+
+  const charts = [];
+  const cache  = S.cache;
+
+  // Helper: leggi un valore dalla cache
+  const val = (secId, rowId, fid) => {
+    const v = parseFloat(cache[`${secId}_${rowId}`]?.values?.[fid]);
+    return isNaN(v) ? null : v;
+  };
+
+  if (S.controlType === 'accettazione') {
+    // 1) Dose in Aria vs kV (assiale – prime 6 righe)
+    const aKv   = [120, 120, 120, 80, 100, 140];
+    const aExp  = ['r1','r2','r3','r4','r5','r6'].map((id,i) => ({
+      kv: aKv[i], v: val('dose_aria_ass', id, 'ct_exp')
+    })).filter(r => r.v !== null);
+    // raggruppa per kV univoco
+    const kvU   = [...new Set(aExp.map(r=>r.kv))].sort((a,b)=>a-b);
+    if (kvU.length >= 3) {
+      charts.push(buildSvgChart({
+        title: 'Dose in Aria vs kVp (assiale)',
+        type: 'line',
+        labels: kvU.map(String),
+        datasets: [{
+          label: 'CT Exposure (mGy·cm)',
+          data: kvU.map(kv => {
+            const matches = aExp.filter(r => r.kv === kv);
+            return matches.length ? +(matches.reduce((s,r)=>s+r.v,0)/matches.length).toFixed(2) : null;
+          }),
+          color: '#4d9fff',
+        }],
+        yLabel: 'mGy·cm',
+      }));
+    }
+
+    // 2) CTDIvol fantoccio HEAD centro vs kV
+    const kvList4 = [80, 100, 120, 140];
+    const headData = kvList4.map(kv => val('df_head_ass', `${kv}_centro`, 'ctdi_vol'));
+    if (headData.some(v => v !== null)) {
+      charts.push(buildSvgChart({
+        title: 'CTDIvol HEAD centro vs kVp',
+        type: 'line',
+        labels: kvList4.map(String),
+        datasets: [{
+          label: 'CTDIvol mis. (mGy)',
+          data: headData,
+          color: '#34c264',
+        }, {
+          label: 'CTDIvol TC display',
+          data: kvList4.map(kv => val('df_head_ass', `${kv}_centro`, 'ctdi_vol_tc')),
+          color: '#f0a500',
+        }],
+        yLabel: 'mGy',
+      }));
+    }
+
+    // 3) Rumore iterativi vs livello %
+    const iterLvl = [0,10,20,30,40,50,60,70,80,90,100];
+    const rumore1 = iterLvl.map(l => val('ric_iter_1', `ri1_${l}`, 'rumore'));
+    if (rumore1.some(v => v !== null)) {
+      charts.push(buildSvgChart({
+        title: 'Rumore (HU) vs Livello Iterazione %',
+        type: 'line',
+        labels: iterLvl.map(String),
+        datasets: [{ label: 'Rumore HU', data: rumore1, color: '#a78bfa' }],
+        yLabel: 'HU',
+      }));
+    }
+
+    // 4) CTDIvol HEAD – 5 posizioni @ 120 kV (barre)
+    const pos5ids = ['centro','ore_3','ore_6','ore_9','ore_12'];
+    const posLabels = ['C','3h','6h','9h','12h'];
+    const posMis = pos5ids.map(p => val('df_head_ass', `120_${p}`, 'ctdi_vol'));
+    const posTc  = pos5ids.map(p => val('df_head_ass', `120_${p}`, 'ctdi_vol_tc'));
+    if (posMis.some(v => v !== null)) {
+      charts.push(buildSvgChart({
+        title: 'CTDIvol HEAD 120 kV – 5 posizioni',
+        type: 'bar',
+        labels: posLabels,
+        datasets: [
+          { label: 'Misurato', data: posMis, color: '#4d9fff' },
+          { label: 'TC display', data: posTc,  color: '#38bdf8' },
+        ],
+        yLabel: 'mGy',
+      }));
+    }
+  }
+
+  if (S.controlType === 'costanza') {
+    // 1) Riproducibilità CTDI – barre 3 misure
+    const rip = [1,2,3].map(n => val('riprod_ctdi', `rip_${n}`, 'dose_air'));
+    if (rip.some(v => v !== null)) {
+      const ripMedia = rip.filter(v=>v!==null).reduce((a,b)=>a+b,0) / rip.filter(v=>v!==null).length;
+      charts.push(buildSvgChart({
+        title: 'Riproducibilità CTDI – 3 misure',
+        type: 'bar',
+        labels: ['Mis.1','Mis.2','Mis.3'],
+        datasets: [{ label: 'Dose free air (mGy·cm)', data: rip, color: '#4d9fff' }],
+        yLabel: 'mGy·cm',
+        refLine: ripMedia,
+        warnLine: ripMedia ? ripMedia * (1 + S.settings.threshold_warn/100) : null,
+      }));
+    }
+
+    // 2) CTDI100 vs kV (costanza)
+    const kvs = [80,100,120,140];
+    const c100 = kvs.map(kv => val('var_kv', `vkv_${kv}`, 'ctdi100'));
+    const cph  = kvs.map(kv => val('var_kv', `vkv_${kv}`, 'ctdi100_ph'));
+    if (c100.some(v => v !== null)) {
+      charts.push(buildSvgChart({
+        title: 'CTDI₁₀₀ vs kVp (Costanza)',
+        type: 'line',
+        labels: kvs.map(String),
+        datasets: [
+          { label: 'Aria', data: c100, color: '#4d9fff' },
+          { label: 'Fantoccio (pH)', data: cph, color: '#34c264' },
+        ],
+        yLabel: 'mGy',
+      }));
+    }
+  }
+
+  if (S.controlType === 'stato') {
+    // 1) Linearità con mAs – ordinato per mAs crescente
+    const masOrder = [
+      { id:'mas_50',  mAs:50  },
+      { id:'mas_100', mAs:100 },
+      { id:'mas_200', mAs:200 },
+      { id:'mas_300', mAs:300 },
+    ];
+    const masVol = masOrder.map(r => val('stato_lin_mas', r.id, 'ctdi_vol'));
+    const masTc  = masOrder.map(r => val('stato_lin_mas', r.id, 'ctdi_vol_tc'));
+    if (masVol.some(v => v !== null)) {
+      // Linea teorica di riferimento (proporzionalità lineare a mAs)
+      const ref100 = masVol[1] ?? masTc[1]; // valore a 100 mAs come riferimento
+      const masLinRef = ref100 != null
+        ? masOrder.map(r => +(ref100 * r.mAs / 100).toFixed(2))
+        : masOrder.map(() => null);
+      charts.push(buildSvgChart({
+        title: 'CTDIvol vs mAs (Linearità)',
+        type: 'line',
+        labels: masOrder.map(r => String(r.mAs)),
+        datasets: [
+          { label: 'CTDIvol mis.', data: masVol, color: '#4d9fff' },
+          { label: 'CTDIvol TC',   data: masTc,  color: '#f0a500' },
+          { label: 'Atteso (lineare)', data: masLinRef, color: '#34c264' },
+        ],
+        yLabel: 'mGy',
+        fillArea: true,
+      }));
+    }
+
+    // 2) CTDIvol vs kVp (Stato) + linea TC display
+    const kvs4 = [80,100,120,140];
+    const statVol = kvs4.map(kv => val('stato_var_kv', `kv_${kv}`, 'ctdi_vol'));
+    const statTc  = kvs4.map(kv => val('stato_var_kv', `kv_${kv}`, 'ctdi_vol_tc'));
+    if (statVol.some(v => v !== null)) {
+      charts.push(buildSvgChart({
+        title: 'CTDIvol vs kVp (Stato annuale)',
+        type: 'line',
+        labels: kvs4.map(String),
+        datasets: [
+          { label: 'CTDIvol mis.',   data: statVol, color: '#34c264' },
+          { label: 'CTDIvol TC',     data: statTc,  color: '#f04f4f' },
+        ],
+        yLabel: 'mGy',
+      }));
+    }
+
+    // 3) HEAD vs BODY per kVp (barre)
+    const bodyVol = kvs4.map(kv => val('stato_body', `body_kv${kv}`, 'ctdi_vol'));
+    if (bodyVol.some(v => v !== null)) {
+      charts.push(buildSvgChart({
+        title: 'CTDIvol HEAD vs BODY per kVp',
+        type: 'bar',
+        labels: kvs4.map(String),
+        datasets: [
+          { label: 'HEAD', data: statVol, color: '#4d9fff' },
+          { label: 'BODY', data: bodyVol, color: '#38bdf8' },
+        ],
+        yLabel: 'mGy',
+      }));
+    }
+
+    // 4) Riproducibilità CTDI (Costanza in Stato) – 3 misure
+    const sRip = [1,2,3].map(n => val('stato_riprod', `srip_${n}`, 'dose_air'));
+    if (sRip.some(v => v !== null)) {
+      const sRipMedia = sRip.filter(v=>v!==null).reduce((a,b)=>a+b,0) / sRip.filter(v=>v!==null).length;
+      charts.push(buildSvgChart({
+        title: 'Riproducibilità Dose – 3 misure (Costanza Stato)',
+        type: 'bar',
+        labels: ['Mis. 1','Mis. 2','Mis. 3'],
+        datasets: [{ label: 'Dose free air (mGy·cm)', data: sRip, color: '#4d9fff' }],
+        yLabel: 'mGy·cm',
+        refLine: sRipMedia,
+        warnLine: sRipMedia ? sRipMedia * (1 + S.settings.threshold_warn/100) : null,
+      }));
+    }
+
+    // 5) Rumore HU per posizione (barre)
+    const rPosIds = ['c','3h','6h','9h','12h'];
+    const rPosLbls = ['C','3h','6h','9h','12h'];
+    const rumorePosVals = rPosIds.map(pid => val('stato_rumore', `rumore_${pid}`, 'hu_std'));
+    const huMeanVals    = rPosIds.map(pid => val('stato_rumore', `rumore_${pid}`, 'hu_mean'));
+    if (rumorePosVals.some(v => v !== null)) {
+      charts.push(buildSvgChart({
+        title: 'Rumore HU – 5 posizioni fantoccio uniforme',
+        type: 'bar',
+        labels: rPosLbls,
+        datasets: [
+          { label: 'Rumore dev.std (HU)', data: rumorePosVals, color: '#a78bfa' },
+          { label: 'HU medio',            data: huMeanVals,    color: '#34c264' },
+        ],
+        yLabel: 'HU',
+      }));
+    }
+
+    // 6) Uniformità HU – profilo radiale (line)
+    const unifRow = S.cache['stato_uniformita_unif_1'];
+    if (unifRow?.values) {
+      const u = unifRow.values;
+      const unifHu = [
+        parseFloat(u.hu_9h), parseFloat(u.hu_centro), parseFloat(u.hu_3h),
+      ];
+      const unifHu2 = [
+        parseFloat(u.hu_12h), parseFloat(u.hu_centro), parseFloat(u.hu_6h),
+      ];
+      const uc = parseFloat(u.hu_centro);
+      if (!isNaN(uc)) {
+        charts.push(buildSvgChart({
+          title: 'Uniformità HU – profilo radiale',
+          type: 'line',
+          labels: ['9h','Centro','3h'],
+          datasets: [
+            { label: 'Asse 9h–3h',  data: unifHu.map(v=>isNaN(v)?null:v),  color: '#4d9fff' },
+            { label: 'Asse 12h–6h', data: unifHu2.map(v=>isNaN(v)?null:v), color: '#f0a500' },
+          ],
+          yLabel: 'HU',
+          warnLine: uc + 4,
+          failLine: uc + 6,
+        }));
+      }
+    }
+
+    // 7) Collimazione/pitch – CTDIvol barre
+    const cpIds  = ['coll_40','pitch_042','coll40_pit042'];
+    const cpLbls = ['Coll 40mm','Pitch 0.42','C40+P0.42'];
+    const cpVol  = cpIds.map(id => val('stato_coll_pitch', id, 'ctdi_vol'));
+    if (cpVol.some(v => v !== null)) {
+      charts.push(buildSvgChart({
+        title: 'CTDIvol – Variazione collimazione e pitch',
+        type: 'bar',
+        labels: cpLbls,
+        datasets: [
+          { label: 'CTDIvol mis.', data: cpVol, color: '#fb923c' },
+          { label: 'CTDIvol TC',   data: cpIds.map(id => val('stato_coll_pitch', id, 'ctdi_vol_tc')), color: '#f04f4f' },
+        ],
+        yLabel: 'mGy',
+      }));
+    }
+  }
+
+  if (charts.length) {
+    container.innerHTML = `
+      <div class="rpt-section rpt-charts-section">
+        <div class="rpt-sec-title">Grafici di sintesi</div>
+        <div class="rpt-charts-grid">${charts.join('')}</div>
+      </div>`;
+  } else {
+    container.innerHTML = '';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════════════
 async function init() {
-  applyStoredTheme();
+  // Applica tema salvato (aggiorna icona bottone ora che il DOM è pronto)
+  applyTheme(localStorage.getItem('tcqc-theme') === 'light' ? 'light' : 'dark');
   // Mostra logo e intestazione nell'header
   const hdrLogo = document.getElementById('hdr-logo');
   if (hdrLogo) { hdrLogo.src = LOGO_MAURIZIANO; hdrLogo.style.display = 'block'; }
