@@ -308,16 +308,6 @@ button { cursor: pointer; }
 .d-warn .delta-bar-fill { background: var(--warn); }
 .d-fail .delta-bar-fill { background: var(--fail); }
 
-/* Linked row badge */
-.link-badge {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: .68rem; font-family: var(--mono);
-  background: rgba(77,159,255,.12); border: 1px solid rgba(77,159,255,.35);
-  color: var(--accent); border-radius: 4px; padding: 1px 6px; margin-bottom: 6px;
-  cursor: default;
-}
-.link-badge svg { width: 10px; height: 10px; }
-
 /* Yes/No toggle */
 .yn-grp { display: flex; gap: 6px; }
 .yn-btn { flex: 1; padding: 7px; border-radius: 5px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: .85rem; font-weight: 500; transition: all .15s; }
@@ -403,17 +393,15 @@ button { cursor: pointer; }
 .rpt-charts-section { margin-bottom: 24px; }
 .rpt-charts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 14px;
   margin-bottom: 6px;
 }
 .rpt-chart-box {
   background: var(--bg2); border: 1px solid var(--border);
   border-radius: var(--r); padding: 14px 16px;
   break-inside: avoid;
-  transition: border-color .15s;
 }
-.rpt-chart-box:hover { border-color: rgba(77,159,255,.4); }
 .rpt-chart-title {
   font-size: .74rem; font-weight: 700; text-transform: uppercase;
   letter-spacing: .07em; color: var(--muted); margin-bottom: 10px;
@@ -992,56 +980,6 @@ const QC_DEF = {
       ],
       fields: CTDI_FIELDS,
     },
-
-    // ── COSTANZA NELLA PROVA DI STATO ─────────────────────────────────────
-    {
-      id:'stato_riprod', tab:'Costanza',
-      title:'Riproducibilità CTDI – 3 misure (Stato)',
-      desc:'Verifica riproducibilità dose. kV=120, mA=100, coll=10mm, rot=1s, FOV=head. Δ% rispetto alla media.',
-      paramFields:[P('misura','Misura #'),P('kV','kV'),P('mA','mA'),P('coll_mm','Coll. (mm)'),P('rot_s','Rot. (s)'),P('fov','FOV')],
-      defaultRows:[1,2,3].map(n => ({
-        id:`srip_${n}`, params:[P('misura',n),P('kV',120),P('mA',100),P('coll_mm',10),P('rot_s',1),P('fov','head')]
-      })),
-      fields:[
-        { id:'dose_air',  label:'Dose free air', unit:'mGy·cm', type:'number' },
-        { id:'pct_media', label:'% vs media',     unit:'%',      type:'number', isReprod:true },
-      ],
-    },
-    {
-      id:'stato_rumore', tab:'Costanza',
-      title:'Rumore e numero TC (Stato) – Fantoccio uniforme',
-      desc:'Misura di rumore (dev.std HU) e valore medio HU nel fantoccio di acqua. kV=120, mA=100, coll=10mm.',
-      paramFields:[P('posiz','Posiz.'),P('kV','kV'),P('mA','mA'),P('coll_mm','Coll. (mm)'),P('fov','FOV')],
-      defaultRows:[
-        {id:'rumore_c',  params:[P('posiz','Centro'), P('kV',120),P('mA',100),P('coll_mm',10),P('fov','head')]},
-        {id:'rumore_3h', params:[P('posiz','Ore 3'),  P('kV',120),P('mA',100),P('coll_mm',10),P('fov','head')]},
-        {id:'rumore_6h', params:[P('posiz','Ore 6'),  P('kV',120),P('mA',100),P('coll_mm',10),P('fov','head')]},
-        {id:'rumore_9h', params:[P('posiz','Ore 9'),  P('kV',120),P('mA',100),P('coll_mm',10),P('fov','head')]},
-        {id:'rumore_12h',params:[P('posiz','Ore 12'), P('kV',120),P('mA',100),P('coll_mm',10),P('fov','head')]},
-      ],
-      fields:[
-        { id:'hu_mean',  label:'HU medio',           unit:'HU',  type:'number' },
-        { id:'hu_std',   label:'Rumore (dev.std)',    unit:'HU',  type:'number' },
-      ],
-    },
-    {
-      id:'stato_uniformita', tab:'Costanza',
-      title:'Uniformità e artefatti (Stato) – Fantoccio uniforme',
-      desc:'Uniformità di campo: differenza HU tra centro e periferia (±ore). Soglia tipica: |ΔHU| ≤ 4 HU.',
-      paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll. (mm)'),P('fov','FOV')],
-      defaultRows:[
-        {id:'unif_1', params:[P('kV',120),P('mA',100),P('coll_mm',10),P('fov','head')]},
-      ],
-      fields:[
-        { id:'hu_centro', label:'HU centro',  unit:'HU', type:'number' },
-        { id:'hu_3h',     label:'HU ore 3',   unit:'HU', type:'number' },
-        { id:'hu_6h',     label:'HU ore 6',   unit:'HU', type:'number' },
-        { id:'hu_9h',     label:'HU ore 9',   unit:'HU', type:'number' },
-        { id:'hu_12h',    label:'HU ore 12',  unit:'HU', type:'number' },
-        { id:'delta_max', label:'|ΔHU| max',  unit:'HU', type:'number', isUnifDelta:true },
-      ],
-      isUnif: true,
-    },
   ],
 
 };
@@ -1457,29 +1395,9 @@ function renderCard(sec, row) {
       </div>
     `;
 
-  // ───────── LINK BADGE (riga condivisa tra linearità mAs e dose vs kVp) ─────
-  const linkedBadge = (() => {
-    if (sec.id === 'stato_lin_mas' && row.id === 'mas_100')
-      return `<div class="link-badge" title="Questa misura (120 kVp, 100 mA) è il punto di riferimento comune anche per 'Dose al variare dei kVp' (kv_120)">
-        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M4 6h4M7 4l2 2-2 2M5 8l-2-2 2-2"/>
-        </svg>
-        Punto comune – Dose vs kVp (kv_120)
-      </div>`;
-    if (sec.id === 'stato_var_kv' && row.id === 'kv_120')
-      return `<div class="link-badge" title="Questa misura (120 kVp, 100 mA) è il punto di riferimento comune anche per 'Linearità con mAs' (mas_100)">
-        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M4 6h4M7 4l2 2-2 2M5 8l-2-2 2-2"/>
-        </svg>
-        Punto comune – Linearità mAs (mas_100)
-      </div>`;
-    return '';
-  })();
-
   // ───────── RETURN ─────────
   return `
     <div class="mcard ${sClass} ${isAcc ? 'accepted' : ''}" id="${cardId}">
-      ${linkedBadge}
       ${paramsHtml}
       <div class="minputs ${colsClass}">
         ${inputsHtml}
@@ -1622,16 +1540,15 @@ function renderField(secId, rowId, field, currentVal, isAccepted, row) {
     </div>`;
   }
 
-  // Campo calcolato automaticamente (|ΔHU| max uniformità)
-  if (field.isUnifDelta) {
+  // Campo calcolato automaticamente (% vs media riproducibilità)
+  if (field.isReprod) {
     const num = parseFloat(val);
     const hasVal = !isNaN(num) && val !== '';
-    // Soglia: 4 HU warn, 6 HU fail
-    const ds = hasVal ? (Math.abs(num) <= 4 ? 'ok' : Math.abs(num) <= 6 ? 'warn' : 'fail') : 'none';
+    const ds = hasVal ? getDeltaStatus(Math.abs(num)) : 'none';
     const color = ds==='ok' ? 'var(--ok)' : ds==='warn' ? 'var(--warn)' : ds==='fail' ? 'var(--fail)' : 'var(--muted)';
-    const display = hasVal ? Math.abs(num).toFixed(1) + ' HU' : '–';
+    const display = hasVal ? (num >= 0 ? '+' : '') + num.toFixed(2) + ' %' : '–';
     return `<div class="igroup">
-      <label class="ilabel">${field.label} <span class="iunit">(soglia ≤4 HU)</span></label>
+      <label class="ilabel">${field.label} <span class="iunit"></span></label>
       <div style="background:var(--bg);border:1px solid var(--border);border-radius:5px;
                   padding:6px 8px;font-family:var(--mono);font-size:.88rem;
                   color:${color};font-weight:700;min-height:32px;">
@@ -1715,12 +1632,6 @@ function computeStatus(sec, row, vals) {
     const pct = parseFloat(vals[reprodField.id]);
     if (!isNaN(pct)) return getDeltaStatus(Math.abs(pct));
   }
-  // Uniformità: colora in base a delta_max
-  const unifField = sec.fields.find(f=>f.isUnifDelta);
-  if (unifField) {
-    const d = parseFloat(vals[unifField.id]);
-    if (!isNaN(d)) return Math.abs(d) <= 4 ? 'ok' : Math.abs(d) <= 6 ? 'warn' : 'fail';
-  }
   // Check if any value filled at all
   const hasAny = sec.fields.some(f => vals[f.id] != null && vals[f.id] !== '');
   return hasAny ? 'ok' : 'none';
@@ -1781,8 +1692,6 @@ function onInputChange(input, doRefresh = false) {
 
   // 4️⃣ Ricalcola % vs media per sezioni con isReprod
   recomputeReprod(sec);
-  // Ricalcola delta_max per sezioni uniformità
-  recomputeUnif(sec);
 
   // 5️⃣ Salvataggio debounced
   clearTimeout(input._saveTimer);
@@ -1832,30 +1741,6 @@ function recomputeReprod(secId) {
     ensureCache(secId, r.id);
     S.cache[`${secId}_${r.id}`].values[reprodField.id] = String(pct);
     // Salva e ri-renderizza la card
-    saveMeasurement(secId, r.id);
-    refreshCard(secId, r.id);
-  });
-}
-
-/**
- * Ricalcola il campo delta_max per la sezione uniformità (isUnif).
- * delta_max = max(|HU_periferia - HU_centro|) tra le 4 posizioni periferiche.
- */
-function recomputeUnif(secId) {
-  const secDef = getSecDef(secId);
-  if (!secDef?.isUnif) return;
-  const rows = getSectionRows(secDef);
-  rows.forEach(r => {
-    const v = S.cache[`${secId}_${r.id}`]?.values || {};
-    const centro = parseFloat(v.hu_centro);
-    if (isNaN(centro)) return;
-    const periph = ['hu_3h','hu_6h','hu_9h','hu_12h']
-      .map(k => parseFloat(v[k]))
-      .filter(n => !isNaN(n));
-    if (!periph.length) return;
-    const deltaMax = +Math.max(...periph.map(p => Math.abs(p - centro))).toFixed(1);
-    ensureCache(secId, r.id);
-    S.cache[`${secId}_${r.id}`].values.delta_max = String(deltaMax);
     saveMeasurement(secId, r.id);
     refreshCard(secId, r.id);
   });
@@ -2509,32 +2394,6 @@ async function seedDemoData() {
       });
     }
 
-    // stato_riprod: 3 misure riproducibilità dose (Costanza in Stato)
-    const statRipDoses = [1,2,3].map(() => +(14.2 + noise() * 0.3).toFixed(2));
-    const statRipMedia = statRipDoses.reduce((s,v)=>s+v,0) / statRipDoses.length;
-    for (const [idx, n] of [[0,1],[1,2],[2,3]]) {
-      const pct = +((statRipDoses[idx] - statRipMedia) / statRipMedia * 100).toFixed(3);
-      await saveMeas(statId, 'stato_riprod', `srip_${n}`, { dose_air: statRipDoses[idx], pct_media: pct });
-    }
-
-    // stato_rumore: fantoccio uniforme, 5 posizioni
-    const huBase = 2.1; // HU acqua ideale ~0, nella pratica piccola offset
-    const rumorePosIds = ['c','3h','6h','9h','12h'];
-    for (const pid of rumorePosIds) {
-      await saveMeas(statId, 'stato_rumore', `rumore_${pid}`, {
-        hu_mean: +(huBase + noise() * 0.5).toFixed(1),
-        hu_std:  +(5.8 + noise() * 0.6).toFixed(1),
-      });
-    }
-
-    // stato_uniformita: delta_max calcolato automaticamente
-    const huCentro = +(1.8 + noise() * 0.4).toFixed(1);
-    const huPeriph = { hu_3h: +(3.2+noise()*0.4).toFixed(1), hu_6h: +(4.1+noise()*0.4).toFixed(1), hu_9h: +(2.9+noise()*0.4).toFixed(1), hu_12h: +(3.5+noise()*0.4).toFixed(1) };
-    const deltaMax = +Math.max(...Object.values(huPeriph).map(p => Math.abs(p - huCentro))).toFixed(1);
-    await saveMeas(statId, 'stato_uniformita', 'unif_1', {
-      hu_centro: huCentro, ...huPeriph, delta_max: String(deltaMax),
-    });
-
     // ── Segna i controlli come completati ──
     for (const t of types)
       await api.put(`/api/controls/${created[t].id}`, { status: 'complete' });
@@ -2559,170 +2418,121 @@ async function seedDemoData() {
 // ═══════════════════════════════════════════════════════════════════════
 
 /**
- * Costruisce un grafico SVG generico – versione migliorata.
- * @param {object} cfg - { title, type:'line'|'bar'|'scatter', labels, datasets,
- *                         yLabel, width, height, warnLine, failLine, refLine }
+ * Costruisce un grafico SVG generico.
+ * @param {object} cfg - { title, type:'line'|'bar', labels, datasets, yLabel, width, height }
  * @returns {string} HTML del .rpt-chart-box
  */
 function buildSvgChart(cfg) {
-  const W = cfg.width  || 380;
-  const H = cfg.height || 210;
-  const PAD = { top: 22, right: 20, bottom: 44, left: 52 };
+  const W = cfg.width  || 340;
+  const H = cfg.height || 180;
+  const PAD = { top: 18, right: 16, bottom: 38, left: 46 };
   const cW = W - PAD.left - PAD.right;
   const cH = H - PAD.top  - PAD.bottom;
 
-  // Raccolta valori per scala Y
+  // raccolta tutti i valori per scala Y
   const allVals = cfg.datasets.flatMap(d => d.data.filter(v => v != null && !isNaN(v)));
   if (!allVals.length) return '';
-
-  // Includi warnLine/failLine/refLine nella scala
-  const refVals = [cfg.warnLine, cfg.failLine, cfg.refLine].filter(v => v != null);
-  const scalVals = [...allVals, ...refVals];
-
-  let yMin = Math.min(...scalVals);
-  let yMax = Math.max(...scalVals);
-  const yPad = (yMax - yMin) * 0.18 || 1;
+  let yMin = Math.min(...allVals);
+  let yMax = Math.max(...allVals);
+  const yPad = (yMax - yMin) * 0.15 || 1;
   yMin = Math.floor(yMin - yPad);
   yMax = Math.ceil(yMax  + yPad);
-  const yRange = yMax - yMin || 1;
+  const yRange = yMax - yMin;
 
   const xCount = cfg.labels.length;
   const xStep  = cW / Math.max(xCount - 1, 1);
-  const barW   = Math.min(28, cW / xCount * 0.55);
+  const barW   = cW / xCount * 0.6;
 
   const toX = i  => PAD.left + (cfg.type === 'bar' ? (i + 0.5) * cW / xCount : i * xStep);
   const toY = v  => PAD.top  + cH * (1 - (v - yMin) / yRange);
 
-  // ─── Sfondo area plot ───
-  const plotBg = `<rect x="${PAD.left}" y="${PAD.top}" width="${cW}" height="${cH}"
-    fill="rgba(255,255,255,0.015)" rx="2"/>`;
-
-  // ─── Grid lines & Y labels ───
-  const gridLines = 5;
+  // Grid lines & Y labels
+  const gridLines = 4;
   let grid = '';
   for (let g = 0; g <= gridLines; g++) {
     const vy  = yMin + yRange * g / gridLines;
     const cy  = toY(vy);
-    const lbl = Math.abs(vy) >= 100 ? vy.toFixed(0) : Math.abs(vy) >= 10 ? vy.toFixed(1) : vy.toFixed(2);
-    const isBaseline = g === 0;
-    grid += `<line x1="${PAD.left}" y1="${cy.toFixed(1)}" x2="${(PAD.left+cW).toFixed(1)}" y2="${cy.toFixed(1)}"
-               stroke="${isBaseline ? '#3a4257' : '#2a3048'}" stroke-width="${isBaseline?'1.5':'0.8'}"
-               stroke-dasharray="${isBaseline ? 'none' : '3,4'}"/>
-             <text x="${(PAD.left-7).toFixed(1)}" y="${(cy+3.5).toFixed(1)}" text-anchor="end"
-               fill="#6a789a" font-size="9.5" font-family="'Cascadia Code','Consolas',monospace">${lbl}</text>`;
+    const lbl = Number.isInteger(vy) ? vy : vy.toFixed(1);
+    grid += `<line x1="${PAD.left}" y1="${cy}" x2="${PAD.left+cW}" y2="${cy}"
+               stroke="#2e3547" stroke-width="1" stroke-dasharray="${g===0?'none':'3,3'}"/>
+             <text x="${PAD.left-5}" y="${cy+4}" text-anchor="end" fill="#7a86a0"
+               font-size="9" font-family="'Cascadia Code','Consolas',monospace">${lbl}</text>`;
   }
 
-  // ─── X labels ───
+  // X labels
   let xLabels = '';
   cfg.labels.forEach((lbl, i) => {
-    xLabels += `<text x="${toX(i).toFixed(1)}" y="${(PAD.top+cH+16).toFixed(1)}" text-anchor="middle"
-      fill="#6a789a" font-size="9.5" font-family="'Cascadia Code','Consolas',monospace">${lbl}</text>`;
+    xLabels += `<text x="${toX(i)}" y="${PAD.top+cH+14}" text-anchor="middle"
+      fill="#7a86a0" font-size="9" font-family="'Cascadia Code','Consolas',monospace">${lbl}</text>`;
   });
 
-  // ─── Y axis label ───
+  // Y axis label
   const yAxisLabel = cfg.yLabel
-    ? `<text x="10" y="${(PAD.top + cH/2).toFixed(1)}" text-anchor="middle"
-         fill="#6a789a" font-size="9.5" font-family="sans-serif"
-         transform="rotate(-90,10,${(PAD.top + cH/2).toFixed(1)})">${cfg.yLabel}</text>`
+    ? `<text x="9" y="${PAD.top + cH/2}" text-anchor="middle"
+         fill="#7a86a0" font-size="9" font-family="sans-serif"
+         transform="rotate(-90,9,${PAD.top + cH/2})">${cfg.yLabel}</text>`
     : '';
 
-  // ─── Axes ───
+  // Axes
   const axes = `
-    <line x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top+cH}" stroke="#3a4257" stroke-width="1.5"/>
-    <line x1="${PAD.left}" y1="${PAD.top+cH}" x2="${PAD.left+cW}" y2="${PAD.top+cH}" stroke="#3a4257" stroke-width="1.5"/>`;
+    <line x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top+cH}" stroke="#2e3547" stroke-width="1.5"/>
+    <line x1="${PAD.left}" y1="${PAD.top+cH}" x2="${PAD.left+cW}" y2="${PAD.top+cH}" stroke="#2e3547" stroke-width="1.5"/>`;
 
-  // ─── Reference / threshold lines ───
-  let bands = '';
-  if (cfg.refLine != null) {
-    const cy = toY(cfg.refLine);
-    bands += `<line x1="${PAD.left}" y1="${cy.toFixed(1)}" x2="${(PAD.left+cW).toFixed(1)}" y2="${cy.toFixed(1)}"
-               stroke="#4d9fff" stroke-width="1" stroke-dasharray="5,3" opacity="0.6"/>
-              <text x="${(PAD.left+cW+2).toFixed(1)}" y="${(cy+3).toFixed(1)}" fill="#4d9fff" font-size="8">rif</text>`;
-  }
-  if (cfg.warnLine != null) {
-    const cy = toY(cfg.warnLine);
-    bands += `<line x1="${PAD.left}" y1="${cy.toFixed(1)}" x2="${(PAD.left+cW).toFixed(1)}" y2="${cy.toFixed(1)}"
-               stroke="#f0a500" stroke-width="1" stroke-dasharray="4,3" opacity="0.75"/>
-              <text x="${(PAD.left+cW+2).toFixed(1)}" y="${(cy+3).toFixed(1)}" fill="#f0a500" font-size="8">±w</text>`;
-  }
-  if (cfg.failLine != null) {
-    const cy = toY(cfg.failLine);
-    bands += `<line x1="${PAD.left}" y1="${cy.toFixed(1)}" x2="${(PAD.left+cW).toFixed(1)}" y2="${cy.toFixed(1)}"
-               stroke="#f04f4f" stroke-width="1" stroke-dasharray="4,3" opacity="0.75"/>
-              <text x="${(PAD.left+cW+2).toFixed(1)}" y="${(cy+3).toFixed(1)}" fill="#f04f4f" font-size="8">±f</text>`;
-  }
+  // Color palette (Excel-like)
+  const PALETTE = ['#4d9fff','#34c264','#f0a500','#f04f4f','#a78bfa','#38bdf8'];
 
-  // ─── Color palette ───
-  const PALETTE = ['#4d9fff','#34c264','#f0a500','#f04f4f','#a78bfa','#38bdf8','#fb923c'];
-
-  // ─── Dataset rendering ───
+  // Dataset paths / bars
   let series = '';
   let legendItems = '';
 
   cfg.datasets.forEach((ds, di) => {
     const col = ds.color || PALETTE[di % PALETTE.length];
-    const nDs = cfg.datasets.length;
 
     if (cfg.type === 'bar') {
-      const totalBarW = barW * nDs + (nDs - 1) * 3;
-      const startOffset = -totalBarW / 2 + di * (barW + 3);
+      const offset = di * barW - (cfg.datasets.length - 1) * barW / 2;
       ds.data.forEach((v, i) => {
         if (v == null || isNaN(v)) return;
-        const bx = toX(i) + startOffset;
+        const bx = toX(i) + offset - barW / 2;
         const by = toY(v);
-        const bh = Math.max(1, (PAD.top + cH) - by);
-        const vLbl = Math.abs(v) >= 10 ? v.toFixed(1) : v.toFixed(2);
+        const bh = (PAD.top + cH) - by;
         series += `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}"
-                     fill="${col}" opacity="0.85" rx="2">
-                     <title>${cfg.labels[i]}: ${v}</title>
-                   </rect>
-                   <text x="${(bx + barW/2).toFixed(1)}" y="${(by - 3).toFixed(1)}" text-anchor="middle"
-                     fill="${col}" font-size="8" font-family="'Cascadia Code','Consolas',monospace">${vLbl}</text>`;
+                     fill="${col}" opacity="0.85" rx="1"/>
+                   <title>${cfg.labels[i]}: ${v}</title>`;
       });
     } else {
-      // Line + filled area under first dataset
-      const pts = ds.data.map((v, i) => v != null && !isNaN(v) ? [toX(i), toY(v)] : null).filter(Boolean);
-      if (pts.length > 1) {
-        if (di === 0 && cfg.fillArea) {
-          const areaPath = `M${pts[0][0].toFixed(1)},${(PAD.top+cH).toFixed(1)} ` +
-            pts.map(([x,y]) => `L${x.toFixed(1)},${y.toFixed(1)}`).join(' ') +
-            ` L${pts[pts.length-1][0].toFixed(1)},${(PAD.top+cH).toFixed(1)} Z`;
-          series += `<path d="${areaPath}" fill="${col}" opacity="0.07"/>`;
-        }
-        series += `<polyline points="${pts.map(([x,y])=>`${x.toFixed(1)},${y.toFixed(1)}`).join(' ')}"
-                     fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-      }
-      // Markers + tooltip
+      // Line + markers
+      const pts = ds.data.map((v, i) => v != null && !isNaN(v) ? `${toX(i).toFixed(1)},${toY(v).toFixed(1)}` : null).filter(Boolean);
+      if (pts.length > 1)
+        series += `<polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round"/>`;
       ds.data.forEach((v, i) => {
         if (v == null || isNaN(v)) return;
-        const cx = toX(i), cy = toY(v);
-        const vLbl = Math.abs(v) >= 10 ? v.toFixed(1) : v.toFixed(2);
-        series += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4" fill="${col}" stroke="#0f1117" stroke-width="1.2">
-                     <title>${cfg.labels[i]}: ${v}</title>
-                   </circle>`;
-        // Value labels for small datasets
-        if (xCount <= 6) {
-          series += `<text x="${cx.toFixed(1)}" y="${(cy - 7).toFixed(1)}" text-anchor="middle"
-                       fill="${col}" font-size="8.5" font-family="'Cascadia Code','Consolas',monospace">${vLbl}</text>`;
-        }
+        series += `<circle cx="${toX(i).toFixed(1)}" cy="${toY(v).toFixed(1)}" r="3.5" fill="${col}" stroke="#0f1117" stroke-width="1"/>`;
       });
     }
 
-    // Legend
-    if (nDs > 1) {
-      const legsPerRow = 3;
-      const lRow = Math.floor(di / legsPerRow);
-      const lCol = di % legsPerRow;
-      const lx = PAD.left + lCol * (cW / legsPerRow);
-      const ly = H - 8 + lRow * 11;
-      legendItems += `<rect x="${lx.toFixed(1)}" y="${(ly-6).toFixed(1)}" width="10" height="6" fill="${col}" rx="1"/>
-                      <text x="${(lx+13).toFixed(1)}" y="${ly.toFixed(1)}" fill="#7a86a0" font-size="8.5"
+    if (cfg.datasets.length > 1) {
+      const lx = PAD.left + di * 90;
+      legendItems += `<rect x="${lx}" y="${H-8}" width="10" height="6" fill="${col}" rx="1"/>
+                      <text x="${lx+13}" y="${H-3}" fill="#7a86a0" font-size="8"
                         font-family="'Cascadia Code','Consolas',monospace">${ds.label||'Serie '+(di+1)}</text>`;
     }
   });
 
-  const svgStr = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">
-    ${plotBg}${yAxisLabel}${grid}${bands}${axes}${series}${xLabels}${legendItems}
+  // Warn / fail bands (optional)
+  let bands = '';
+  if (cfg.warnLine != null) {
+    const cy = toY(cfg.warnLine);
+    bands += `<line x1="${PAD.left}" y1="${cy}" x2="${PAD.left+cW}" y2="${cy}"
+               stroke="#f0a500" stroke-width="1" stroke-dasharray="4,2" opacity="0.7"/>`;
+  }
+  if (cfg.failLine != null) {
+    const cy = toY(cfg.failLine);
+    bands += `<line x1="${PAD.left}" y1="${cy}" x2="${PAD.left+cW}" y2="${cy}"
+               stroke="#f04f4f" stroke-width="1" stroke-dasharray="4,2" opacity="0.7"/>`;
+  }
+
+  const svgStr = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+    ${yAxisLabel}${grid}${bands}${axes}${series}${xLabels}${legendItems}
   </svg>`;
 
   return `<div class="rpt-chart-box">
@@ -2830,15 +2640,12 @@ function renderReportCharts() {
     // 1) Riproducibilità CTDI – barre 3 misure
     const rip = [1,2,3].map(n => val('riprod_ctdi', `rip_${n}`, 'dose_air'));
     if (rip.some(v => v !== null)) {
-      const ripMedia = rip.filter(v=>v!==null).reduce((a,b)=>a+b,0) / rip.filter(v=>v!==null).length;
       charts.push(buildSvgChart({
         title: 'Riproducibilità CTDI – 3 misure',
         type: 'bar',
         labels: ['Mis.1','Mis.2','Mis.3'],
         datasets: [{ label: 'Dose free air (mGy·cm)', data: rip, color: '#4d9fff' }],
         yLabel: 'mGy·cm',
-        refLine: ripMedia,
-        warnLine: ripMedia ? ripMedia * (1 + S.settings.threshold_warn/100) : null,
       }));
     }
 
@@ -2861,39 +2668,26 @@ function renderReportCharts() {
   }
 
   if (S.controlType === 'stato') {
-    // 1) Linearità con mAs – ordinato per mAs crescente
-    const masOrder = [
-      { id:'mas_50',  mAs:50  },
-      { id:'mas_100', mAs:100 },
-      { id:'mas_200', mAs:200 },
-      { id:'mas_300', mAs:300 },
-    ];
-    const masVol = masOrder.map(r => val('stato_lin_mas', r.id, 'ctdi_vol'));
-    const masTc  = masOrder.map(r => val('stato_lin_mas', r.id, 'ctdi_vol_tc'));
+    // 1) Linearità con mAs
+    const masLbls = ['50','100','200','300'];
+    const masIds  = ['mas_50','mas_100','mas_200','mas_300'];
+    const masVol  = masIds.map(id => val('stato_lin_mas', id, 'ctdi_vol'));
     if (masVol.some(v => v !== null)) {
-      // Linea teorica di riferimento (proporzionalità lineare a mAs)
-      const ref100 = masVol[1] ?? masTc[1]; // valore a 100 mAs come riferimento
-      const masLinRef = ref100 != null
-        ? masOrder.map(r => +(ref100 * r.mAs / 100).toFixed(2))
-        : masOrder.map(() => null);
       charts.push(buildSvgChart({
         title: 'CTDIvol vs mAs (Linearità)',
         type: 'line',
-        labels: masOrder.map(r => String(r.mAs)),
+        labels: masLbls,
         datasets: [
           { label: 'CTDIvol mis.', data: masVol, color: '#4d9fff' },
-          { label: 'CTDIvol TC',   data: masTc,  color: '#f0a500' },
-          { label: 'Atteso (lineare)', data: masLinRef, color: '#34c264' },
+          { label: 'CTDIvol TC', data: masIds.map(id => val('stato_lin_mas', id, 'ctdi_vol_tc')), color: '#f0a500' },
         ],
         yLabel: 'mGy',
-        fillArea: true,
       }));
     }
 
-    // 2) CTDIvol vs kVp (Stato) + linea TC display
+    // 2) CTDIvol vs kV (Stato)
     const kvs4 = [80,100,120,140];
     const statVol = kvs4.map(kv => val('stato_var_kv', `kv_${kv}`, 'ctdi_vol'));
-    const statTc  = kvs4.map(kv => val('stato_var_kv', `kv_${kv}`, 'ctdi_vol_tc'));
     if (statVol.some(v => v !== null)) {
       charts.push(buildSvgChart({
         title: 'CTDIvol vs kVp (Stato annuale)',
@@ -2901,13 +2695,13 @@ function renderReportCharts() {
         labels: kvs4.map(String),
         datasets: [
           { label: 'CTDIvol mis.',   data: statVol, color: '#34c264' },
-          { label: 'CTDIvol TC',     data: statTc,  color: '#f04f4f' },
+          { label: 'CTDIvol TC',     data: kvs4.map(kv => val('stato_var_kv', `kv_${kv}`, 'ctdi_vol_tc')), color: '#f04f4f' },
         ],
         yLabel: 'mGy',
       }));
     }
 
-    // 3) HEAD vs BODY per kVp (barre)
+    // 3) BODY vs HEAD @ stessa kV (barre)
     const bodyVol = kvs4.map(kv => val('stato_body', `body_kv${kv}`, 'ctdi_vol'));
     if (bodyVol.some(v => v !== null)) {
       charts.push(buildSvgChart({
@@ -2917,83 +2711,6 @@ function renderReportCharts() {
         datasets: [
           { label: 'HEAD', data: statVol, color: '#4d9fff' },
           { label: 'BODY', data: bodyVol, color: '#38bdf8' },
-        ],
-        yLabel: 'mGy',
-      }));
-    }
-
-    // 4) Riproducibilità CTDI (Costanza in Stato) – 3 misure
-    const sRip = [1,2,3].map(n => val('stato_riprod', `srip_${n}`, 'dose_air'));
-    if (sRip.some(v => v !== null)) {
-      const sRipMedia = sRip.filter(v=>v!==null).reduce((a,b)=>a+b,0) / sRip.filter(v=>v!==null).length;
-      charts.push(buildSvgChart({
-        title: 'Riproducibilità Dose – 3 misure (Costanza Stato)',
-        type: 'bar',
-        labels: ['Mis. 1','Mis. 2','Mis. 3'],
-        datasets: [{ label: 'Dose free air (mGy·cm)', data: sRip, color: '#4d9fff' }],
-        yLabel: 'mGy·cm',
-        refLine: sRipMedia,
-        warnLine: sRipMedia ? sRipMedia * (1 + S.settings.threshold_warn/100) : null,
-      }));
-    }
-
-    // 5) Rumore HU per posizione (barre)
-    const rPosIds = ['c','3h','6h','9h','12h'];
-    const rPosLbls = ['C','3h','6h','9h','12h'];
-    const rumorePosVals = rPosIds.map(pid => val('stato_rumore', `rumore_${pid}`, 'hu_std'));
-    const huMeanVals    = rPosIds.map(pid => val('stato_rumore', `rumore_${pid}`, 'hu_mean'));
-    if (rumorePosVals.some(v => v !== null)) {
-      charts.push(buildSvgChart({
-        title: 'Rumore HU – 5 posizioni fantoccio uniforme',
-        type: 'bar',
-        labels: rPosLbls,
-        datasets: [
-          { label: 'Rumore dev.std (HU)', data: rumorePosVals, color: '#a78bfa' },
-          { label: 'HU medio',            data: huMeanVals,    color: '#34c264' },
-        ],
-        yLabel: 'HU',
-      }));
-    }
-
-    // 6) Uniformità HU – profilo radiale (line)
-    const unifRow = S.cache['stato_uniformita_unif_1'];
-    if (unifRow?.values) {
-      const u = unifRow.values;
-      const unifHu = [
-        parseFloat(u.hu_9h), parseFloat(u.hu_centro), parseFloat(u.hu_3h),
-      ];
-      const unifHu2 = [
-        parseFloat(u.hu_12h), parseFloat(u.hu_centro), parseFloat(u.hu_6h),
-      ];
-      const uc = parseFloat(u.hu_centro);
-      if (!isNaN(uc)) {
-        charts.push(buildSvgChart({
-          title: 'Uniformità HU – profilo radiale',
-          type: 'line',
-          labels: ['9h','Centro','3h'],
-          datasets: [
-            { label: 'Asse 9h–3h',  data: unifHu.map(v=>isNaN(v)?null:v),  color: '#4d9fff' },
-            { label: 'Asse 12h–6h', data: unifHu2.map(v=>isNaN(v)?null:v), color: '#f0a500' },
-          ],
-          yLabel: 'HU',
-          warnLine: uc + 4,
-          failLine: uc + 6,
-        }));
-      }
-    }
-
-    // 7) Collimazione/pitch – CTDIvol barre
-    const cpIds  = ['coll_40','pitch_042','coll40_pit042'];
-    const cpLbls = ['Coll 40mm','Pitch 0.42','C40+P0.42'];
-    const cpVol  = cpIds.map(id => val('stato_coll_pitch', id, 'ctdi_vol'));
-    if (cpVol.some(v => v !== null)) {
-      charts.push(buildSvgChart({
-        title: 'CTDIvol – Variazione collimazione e pitch',
-        type: 'bar',
-        labels: cpLbls,
-        datasets: [
-          { label: 'CTDIvol mis.', data: cpVol, color: '#fb923c' },
-          { label: 'CTDIvol TC',   data: cpIds.map(id => val('stato_coll_pitch', id, 'ctdi_vol_tc')), color: '#f04f4f' },
         ],
         yLabel: 'mGy',
       }));

@@ -67,6 +67,14 @@ db.exec(`
     rows_json TEXT NOT NULL,
     UNIQUE(machine_id, control_type, section_id)
   );
+
+  CREATE TABLE IF NOT EXISTS signatures (
+    control_id INTEGER PRIMARY KEY,
+    physicist TEXT DEFAULT '',
+    responsible TEXT DEFAULT '',
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY(control_id) REFERENCES controls(id) ON DELETE CASCADE
+  );
 `);
 
 // Default settings
@@ -311,6 +319,30 @@ Bun.serve({
         return json({ ok: true, imported_measurements: imported });
       }
 
+      // ── Signatures ──────────────────────────────────────────────
+      if (path === "/api/signatures") {
+        const control_id = url.searchParams.get("control_id") || (await parseBody(req))?.control_id;
+        if (m === "GET") {
+          const cid2 = url.searchParams.get("control_id");
+          if (!cid2) return json({ error: "control_id required" }, 400);
+          const row = db.query("SELECT * FROM signatures WHERE control_id=?").get(parseInt(cid2));
+          return json(row || { control_id: parseInt(cid2), physicist: '', responsible: '' });
+        }
+        if (m === "PUT") {
+          const b = await parseBody(req);
+          db.run(
+            `INSERT INTO signatures(control_id, physicist, responsible, updated_at)
+             VALUES(?,?,?,datetime('now'))
+             ON CONFLICT(control_id) DO UPDATE SET
+               physicist=excluded.physicist,
+               responsible=excluded.responsible,
+               updated_at=excluded.updated_at`,
+            [b.control_id, b.physicist || '', b.responsible || '']
+          );
+          return json({ ok: true });
+        }
+      }
+
       // ── Export / Backup ─────────────────────────────────────────
       if (path === "/api/export" && m === "GET") {
         return json({
@@ -319,6 +351,7 @@ Bun.serve({
           measurements:   db.query("SELECT * FROM measurements").all(),
           settings:       db.query("SELECT * FROM settings").all(),
           exposure_params: db.query("SELECT * FROM exposure_params").all(),
+          signatures:     db.query("SELECT * FROM signatures").all(),
           exported_at:    new Date().toISOString(),
         });
       }
