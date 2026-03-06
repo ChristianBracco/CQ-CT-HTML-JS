@@ -912,12 +912,45 @@ const QC_DEF = {
         { id:'ctdi_vol_tc', label:'CTDIvol TC display',  unit:'mGy', type:'number', isDeltaB:true },
       ],
     },
+    // ── Card mancanti: Fantoccio CI (stesse del tipo accettazione) ────────
+    {
+      id:'cost_ci_head', tab:'Fantoccio CI',
+      title:'Dose Fantoccio HEAD – Assiale (CI)',
+      desc:'4 kV × 5 posizioni. FOV head, 100 mA. Stessa configurazione dell\'accettazione.',
+      paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll. (mm)'),P('rot_s','Rot. (s)'),P('fov','FOV'),P('posiz','Posiz.')],
+      defaultRows: doseFanRows(KV4, POS5, '10 mm', null, '1 s'),
+      fields: CTDI_FIELDS,
+    },
+    {
+      id:'cost_ci_body', tab:'Fantoccio CI',
+      title:'Dose Fantoccio BODY – Assiale (CI)',
+      desc:'4 kV × 5 posizioni. FOV large body, 300 mA. Stessa configurazione dell\'accettazione.',
+      paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll. (mm)'),P('rot_s','Rot. (s)'),P('fov','FOV'),P('posiz','Posiz.')],
+      defaultRows: doseFanRows(KV4, POS5, '10 mm', null, '1 s').map(r => ({
+        ...r, id:'body_'+r.id,
+        params: r.params.map(pp => pp.id==='fov' ? P('fov','body') : pp.id==='mA' ? P('mA',300) : pp)
+      })),
+      fields: CTDI_FIELDS,
+    },
   ],
 
   // ── PROVA DI STATO ANNUALE ─────────────────────────────────────────────
   // Struttura analoga al semestrale: sezioni per tipo di verifica.
   // Ogni sezione ha il proprio contesto fisico e parametri variati.
   stato: [
+    // ── Prime 3 card: riproducibilità diodo HEAD (120 kVp, 100 mA) – come mobile ──
+    {
+      id:'stato_riprod', tab:'Diodo HEAD',
+      title:'Riproducibilità – Diodo HEAD Spirale (3× 120 kVp)',
+      desc:'3 misure ripetute a 120 kVp, 100 mA, Coll=20 mm, Pitch=0.969, Rot=1 s, FOV=head. Verificano la riproducibilità del sistema prima delle variazioni parametriche.',
+      paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll. (mm)'),P('pitch','Pitch'),P('rot_s','Rot. (s)'),P('fov','FOV')],
+      defaultRows:[
+        {id:'st_r1', params:[P('kV',120),P('mA',100),P('coll_mm',20),P('pitch',0.969),P('rot_s',1),P('fov','head')]},
+        {id:'st_r2', params:[P('kV',120),P('mA',100),P('coll_mm',20),P('pitch',0.969),P('rot_s',1),P('fov','head')]},
+        {id:'st_r3', params:[P('kV',120),P('mA',100),P('coll_mm',20),P('pitch',0.969),P('rot_s',1),P('fov','head')]},
+      ],
+      fields: CTDI_FIELDS,
+    },
     {
       id:'stato_lin_mas', tab:'Linearità',
       title:'Linearità con mAs – HEAD',
@@ -983,6 +1016,80 @@ const QC_DEF = {
   ],
 
 };
+
+// ═══════════════════════════════════════════════════════════════════════
+// CROSS-CONTROL LINK MAP
+// Collega automaticamente i campi condivisi tra sezioni di tipo di
+// controllo diverso (accettazione / costanza / stato) che hanno
+// gli stessi parametri di esposizione (kV, mA, coll_mm, pitch, rot_s, fov).
+// Struttura: 'srcSecId:srcRowId:fieldId' → ['dstSecId:dstRowId:fieldId', ...]
+// ═══════════════════════════════════════════════════════════════════════
+function _paramsSignature(params) {
+  return params
+    .filter(p => ['kV','mA','coll_mm','pitch','rot_s','fov'].includes(p.id))
+    .map(p => `${p.id}=${p.val}`)
+    .sort()
+    .join('|');
+}
+
+const CROSS_LINKS = (function buildCrossLinks() {
+  const links = {};
+  const entries = [];
+  Object.entries(QC_DEF).forEach(([ctrlType, secs]) => {
+    secs.forEach(sec => {
+      const rows = sec.defaultRows;
+      rows.forEach(row => {
+        entries.push({ ctrlType, sec, row, sig: _paramsSignature(row.params) });
+      });
+    });
+  });
+
+  entries.forEach(a => {
+    entries.forEach(b => {
+      if (a === b || a.ctrlType === b.ctrlType || !a.sig || a.sig !== b.sig) return;
+      const aFids = new Set(a.sec.fields.map(f => f.id));
+      const bFids = new Set(b.sec.fields.map(f => f.id));
+      [...aFids].filter(fid => bFids.has(fid)).forEach(fid => {
+        const srcKey = `${a.sec.id}:${a.row.id}:${fid}`;
+        const dstKey = `${b.sec.id}:${b.row.id}:${fid}`;
+        if (!links[srcKey]) links[srcKey] = [];
+        if (!links[srcKey].includes(dstKey)) links[srcKey].push(dstKey);
+      });
+    });
+  });
+  return links;
+})();
+
+// Conta quanti link escono da una card (per il badge)
+function countCardLinks(secId, rowId, fields) {
+  return fields.reduce((n, f) => {
+    const k = `${secId}:${rowId}:${f.id}`;
+    return n + (CROSS_LINKS[k]?.length || 0);
+  }, 0);
+}
+
+// Propaga un valore alle card collegate visibili nel DOM
+function propagateCrossLinks(secId, rowId, fieldId, value) {
+  const srcKey = `${secId}:${rowId}:${fieldId}`;
+  (CROSS_LINKS[srcKey] || []).forEach(dstKey => {
+    const [dSecId, dRowId, dFid] = dstKey.split(':');
+    const cKey = `${dSecId}_${dRowId}`;
+    if (!S.cache[cKey]) S.cache[cKey] = { values:{}, accepted:false, accepted_at:'' };
+    if (S.cache[cKey].accepted) return;  // non sovrascrivere card già accettate
+    S.cache[cKey].values[dFid] = value;
+    // Aggiorna campo visibile se presente nel DOM
+    const inputEl = document.querySelector(
+      `[data-sec="${dSecId}"][data-row="${dRowId}"][data-fid="${dFid}"]`
+    );
+    if (inputEl && !inputEl.disabled) {
+      inputEl.value = value;
+      inputEl.style.transition = 'background .35s';
+      inputEl.style.background = 'rgba(77,159,255,.18)';
+      setTimeout(() => { inputEl.style.background = ''; }, 700);
+      updateDelta(dSecId, dRowId);
+    }
+  });
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 // STATE
@@ -1343,9 +1450,16 @@ function renderCard(sec, row) {
       .map(pt => `<span class="ptag"><strong>${pt.id}:</strong> ${pt.val}</span>`)
       .join('');
 
+    // Badge 🔗 se questa card ha campi condivisi con altri tipi di controllo
+    const linkCount = countCardLinks(sec.id, row.id, sec.fields);
+    const linkBadge = linkCount > 0
+      ? `<span class="badge" style="background:rgba(77,159,255,.1);color:var(--accent);border-color:rgba(77,159,255,.35);font-size:.68rem;cursor:default" title="Valori condivisi con ${linkCount} sezione${linkCount>1?'i':''} collegata${linkCount>1?'e':''}">🔗 collegato</span>`
+      : '';
+
     paramsHtml = `
       <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:10px;flex-wrap:wrap">
         <div class="ptags" style="margin:0;flex:1">${ptags}</div>
+        ${linkBadge}
         ${!isAcc ? `
           <button class="btn btn-ghost btn-xs no-print"
                   title="Modifica parametri acquisizione"
@@ -1689,6 +1803,9 @@ function onInputChange(input, doRefresh = false) {
 
   // 3️⃣ Salva la versione normalizzata nei dati
   S.cache[`${sec}_${row}`].values[fid] = normalized;
+
+  // 🔗 Propaga il valore alle sezioni collegate (stesso set parametri esposizione)
+  propagateCrossLinks(sec, row, fid, normalized);
 
   // 4️⃣ Ricalcola % vs media per sezioni con isReprod
   recomputeReprod(sec);
@@ -2530,6 +2647,12 @@ function buildSvgChart(cfg) {
     bands += `<line x1="${PAD.left}" y1="${cy}" x2="${PAD.left+cW}" y2="${cy}"
                stroke="#f04f4f" stroke-width="1" stroke-dasharray="4,2" opacity="0.7"/>`;
   }
+  if (cfg.refLine != null && cfg.refLine >= yMin && cfg.refLine <= yMax) {
+    const cy = toY(cfg.refLine);
+    bands += `<line x1="${PAD.left}" y1="${cy}" x2="${PAD.left+cW}" y2="${cy}"
+               stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="5,3" opacity="0.8"/>
+             <text x="${PAD.left+cW+3}" y="${cy+4}" fill="#a78bfa" font-size="8">⌀</text>`;
+  }
 
   const svgStr = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
     ${yAxisLabel}${grid}${bands}${axes}${series}${xLabels}${legendItems}
@@ -2640,12 +2763,15 @@ function renderReportCharts() {
     // 1) Riproducibilità CTDI – barre 3 misure
     const rip = [1,2,3].map(n => val('riprod_ctdi', `rip_${n}`, 'dose_air'));
     if (rip.some(v => v !== null)) {
+      const validRip = rip.filter(v => v !== null);
+      const mediaRip = validRip.reduce((s,v)=>s+v,0) / validRip.length;
       charts.push(buildSvgChart({
         title: 'Riproducibilità CTDI – 3 misure',
         type: 'bar',
         labels: ['Mis.1','Mis.2','Mis.3'],
         datasets: [{ label: 'Dose free air (mGy·cm)', data: rip, color: '#4d9fff' }],
         yLabel: 'mGy·cm',
+        refLine: +mediaRip.toFixed(2),
       }));
     }
 
@@ -2668,7 +2794,23 @@ function renderReportCharts() {
   }
 
   if (S.controlType === 'stato') {
-    // 1) Linearità con mAs
+    // 0) Riproducibilità 3 misure iniziali (120 kVp)
+    const ripVol = [1,2,3].map(n => val('stato_riprod', `st_r${n}`, 'ctdi_vol'));
+    const ripTc  = [1,2,3].map(n => val('stato_riprod', `st_r${n}`, 'ctdi_vol_tc'));
+    if (ripVol.some(v => v !== null)) {
+      const media = ripVol.filter(v=>v!==null).reduce((s,v)=>s+v,0) / ripVol.filter(v=>v!==null).length;
+      charts.push(buildSvgChart({
+        title: 'Riproducibilità – 3 mis. 120 kVp',
+        type: 'bar',
+        labels: ['Mis.1','Mis.2','Mis.3'],
+        datasets: [
+          { label: 'CTDIvol mis. (mGy)', data: ripVol, color: '#4d9fff' },
+          { label: 'CTDIvol TC (mGy)',   data: ripTc,  color: '#f0a500' },
+        ],
+        yLabel: 'mGy',
+        refLine: +media.toFixed(2),
+      }));
+    }
     const masLbls = ['50','100','200','300'];
     const masIds  = ['mas_50','mas_100','mas_200','mas_300'];
     const masVol  = masIds.map(id => val('stato_lin_mas', id, 'ctdi_vol'));
