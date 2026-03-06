@@ -47,7 +47,7 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 /* ── BOTTOM NAV ──────────────────────────────────── */
 #bnav{position:fixed;bottom:0;left:0;right:0;height:56px;
   background:var(--bg2);border-top:1px solid var(--brd);
-  display:none;grid-template-columns:repeat(3,1fr);z-index:100}
+  display:none;grid-template-columns:repeat(4,1fr);z-index:100}
 #bnav.vis{display:grid}
 .bnav-btn{background:none;border:none;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:3px;color:var(--mut);
@@ -184,6 +184,11 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 /* Card footer */
 .cfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
 
+/* Badge collegamento cross-controllo */
+.link-badge{font-size:.62rem;font-weight:700;padding:1px 6px;border-radius:4px;
+  background:rgba(77,159,255,.12);color:var(--acc);border:1px solid rgba(77,159,255,.3);
+  display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
+
 /* ── SYNC VIEW ───────────────────────────────────── */
 .sync-card{background:var(--bg2);border:1px solid var(--brd);border-radius:var(--r);
   padding:14px;margin-bottom:12px}
@@ -235,6 +240,9 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
   </button>
   <button class="bnav-btn" id="bnav-meas" onclick="goMeasure()">
     <span class="ico">📐</span>Misure
+  </button>
+  <button class="bnav-btn" id="bnav-charts" onclick="goCharts()">
+    <span class="ico">📈</span>Grafici
   </button>
   <button class="bnav-btn" id="bnav-sync" onclick="showSync()">
     <span class="ico">🔄</span>Sync
@@ -300,6 +308,15 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
   </div>
   <div class="tabs" id="tabs"></div>
   <div id="sec-content"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     VIEW: GRAFICI
+═══════════════════════════════════════════════════ -->
+<div id="view-charts" class="view">
+  <div class="page-title">📈 Grafici sessione</div>
+  <div class="page-sub" id="charts-sub">Seleziona una sessione per visualizzare i grafici.</div>
+  <div id="charts-content"></div>
 </div>
 
 <!-- ══════════════════════════════════════════════════
@@ -527,10 +544,23 @@ const ANNUALE_BODY_ROWS = [
   {id:'ab4', fant:'body', params:[P('kV',140),P('mA',100),P('coll','10mm'),P('pitch',0.969),P('rot','1s'),P('FOV','large body')]},
 ];
 
-// Semestrale assiale
-const SEM_ASS_ROWS = [...ARIA_ASS_ROWS];
-// Semestrale spirale (con colonna CTDIvol TC)
-const SEM_SP_ROWS = [...ARIA_SP_ROWS];
+// Semestrale assiale (stesse righe dell'accettazione)
+const SEM_ASS_ROWS = ARIA_ASS_ROWS.map(r => ({...r, id:'sem_'+r.id}));
+// Semestrale spirale
+const SEM_SP_ROWS  = ARIA_SP_ROWS.map(r  => ({...r, id:'sem_'+r.id}));
+// Semestrale CI head e body (mancavano)
+const SEM_CI_HEAD_ROWS = ciRows('head',100).map(r       => ({...r, id:'sem_'+r.id}));
+const SEM_CI_BODY_ROWS = ciRows('large body',300).map(r => ({...r, id:'sem_'+r.id}));
+
+// ════════ LINK MAP: accoppiamento tra sezioni che condividono i parametri ════
+// Formato: { 'secId_rowId': 'linkedSecId_linkedRowId' }
+// Generato automaticamente confrontando params identici
+const LINK_MAP = (() => {
+  const map = {};
+  const allSecs = [];
+  // Costruiremo dopo l'inizializzazione di QC; usiamo lazy lookup
+  return map;
+})();
 
 // ════════ FIELD DESCRIPTORS PER SEZIONE ════════════
 const F_ARIA_ASS  = [{id:'ct_exp',label:'CT Exposure',unit:'mGy·cm'},{id:'time',label:'Time',unit:'ms'}];
@@ -542,6 +572,7 @@ const F_RIC1      = [{id:'mas',label:'mAs',unit:'mAs'},{id:'rumore',label:'Rumor
 const F_RIC2      = [{id:'rumore',label:'Rumore σ',unit:'HU'}];
 const F_SEM_ASS   = [...F_ARIA_ASS, {id:'ctdi_vol_tc',label:'CTDIvol TC',unit:'mGy',isTCdisplay:true}];
 const F_SEM_SP    = [{id:'ctdi100',label:'CTDI₁₀₀',unit:'mGy'},{id:'ctdi_vol_tc',label:'CTDIvol TC',unit:'mGy',isTCdisplay:true}];
+const F_SEM_CI    = [...F_CI];  // stessi campi della CI accettazione
 
 // ════════ QC DEFINITION ════════════════════════════
 const QC = {
@@ -561,10 +592,65 @@ const QC = {
     {id:'ann_body', tab:'Diodo BODY', title:'Diodo BODY – Spirale',                desc:'Fantoccio large body. Nota: nel software Piranha usa fantoccio head.', rows:ANNUALE_BODY_ROWS, fields:F_CTDI},
   ],
   semestrale: [
-    {id:'sem_ass', tab:'Assiale',  title:'Dose in Aria – Assiale (CI)',        desc:'Eseguire SOLO una delle due modalità (assiale o spirale).', rows:SEM_ASS_ROWS, fields:F_SEM_ASS},
-    {id:'sem_sp',  tab:'Spirale',  title:'Dose in Aria – Spirale (dose probe)',desc:'Alternativa alle acquisizioni assiali.', rows:SEM_SP_ROWS,  fields:F_SEM_SP},
+    {id:'sem_ass',      tab:'Assiale',       title:'Dose in Aria – Assiale (CI)',        desc:'Eseguire SOLO una delle due modalità (assiale o spirale).', rows:SEM_ASS_ROWS,      fields:F_SEM_ASS},
+    {id:'sem_sp',       tab:'Spirale',       title:'Dose in Aria – Spirale (dose probe)',desc:'Alternativa alle acquisizioni assiali.', rows:SEM_SP_ROWS,         fields:F_SEM_SP},
+    {id:'sem_ci_head',  tab:'Fantoccio CI',  title:'Dose Fantoccio HEAD – Assiale (CI)', desc:'4kV × 5 posizioni. FOV head, 100mA. Come accettazione.', rows:SEM_CI_HEAD_ROWS,  fields:F_SEM_CI},
+    {id:'sem_ci_body',  tab:'Fantoccio CI',  title:'Dose Fantoccio BODY – Assiale (CI)', desc:'4kV × 5 posizioni. FOV large body, 300mA. Come accettazione.', rows:SEM_CI_BODY_ROWS, fields:F_SEM_CI},
   ],
 };
+
+// ════════ CROSS-CONTROL LINK MAP ════════════════════
+// Mappa i campi condivisi tra controlli diversi (stesso fantoccio, stessi parametri).
+// Struttura: 'srcSecId:srcRowId:fieldId' → ['dstSecId:dstRowId:fieldId', ...]
+// Costruito all'inizializzazione confrontando params identici tra sezioni di tipo diverso.
+const CROSS_LINKS = buildCrossLinks();
+
+function paramsSignature(params) {
+  // Firma canonica dei parametri di esposizione (esclude pos che cambia ma non l'esposizione)
+  return params
+    .filter(p => ['kV','mA','coll','pitch','rot','FOV'].includes(p.id))
+    .map(p => `${p.id}=${p.val}`)
+    .sort()
+    .join('|');
+}
+
+function buildCrossLinks() {
+  const links = {};
+  // Raggruppa tutte le sezioni per tipo di controllo
+  const groups = {
+    accettazione: QC.accettazione,
+    semestrale:   QC.semestrale,
+    annuale:      QC.annuale,
+  };
+  // Per ogni coppia di tipi di controllo diversi, cerca righe con stessa firma parametri
+  // e stesso set di campi (field ids)
+  const allEntries = [];
+  Object.entries(groups).forEach(([ctrlType, secs]) => {
+    secs.forEach(sec => {
+      sec.rows.forEach(row => {
+        allEntries.push({ ctrlType, sec, row, sig: paramsSignature(row.params) });
+      });
+    });
+  });
+
+  allEntries.forEach(a => {
+    allEntries.forEach(b => {
+      if (a === b || a.ctrlType === b.ctrlType) return;
+      if (a.sig !== b.sig || a.sig === '') return;
+      // Stessa firma: collega i campi in comune
+      const aFields = new Set(a.sec.fields.map(f => f.id));
+      const bFields = new Set(b.sec.fields.map(f => f.id));
+      const shared  = [...aFields].filter(fid => bFields.has(fid));
+      shared.forEach(fid => {
+        const srcKey = `${a.sec.id}:${a.row.id}:${fid}`;
+        const dstKey = `${b.sec.id}:${b.row.id}:${fid}`;
+        if (!links[srcKey]) links[srcKey] = [];
+        if (!links[srcKey].includes(dstKey)) links[srcKey].push(dstKey);
+      });
+    });
+  });
+  return links;
+}
 
 // ════════════════════════════════════════════════════
 // STATE
@@ -610,7 +696,7 @@ function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(`view-${name}`).classList.add('active');
   document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
-  const nm = {home:'bnav-home', measure:'bnav-meas', sync:'bnav-sync'}[name];
+  const nm = {home:'bnav-home', measure:'bnav-meas', charts:'bnav-charts', sync:'bnav-sync'}[name];
   if (nm) document.getElementById(nm)?.classList.add('active');
   document.getElementById('bnav').classList[name !== 'home' || S.session ? 'add' : 'remove']('vis');
 }
@@ -618,6 +704,11 @@ function showView(name) {
 function goHome()    { showView('home');    renderPrevList(); }
 function goMeasure() { if (S.session) { showView('measure'); renderTabs(); renderActiveTab(); } }
 function showSync()  { showView('sync'); updateSyncSub(); }
+function goCharts()  {
+  if (!S.session) { alert('Nessuna sessione attiva'); return; }
+  showView('charts');
+  renderCharts();
+}
 
 function updateBC() {
   if (!S.session) { document.getElementById('bc').textContent = '–'; return; }
@@ -821,10 +912,20 @@ function renderCard(sec, row) {
   // ─────────────────────────────────────────────
   // HEADER (badge solo qui)
   // ─────────────────────────────────────────────
+  // Conta quanti link escono da questa card
+  const linkCount = sec.fields.reduce((n, f) => {
+    const k = `${sec.id}:${row.id}:${f.id}`;
+    return n + (CROSS_LINKS[k]?.length || 0);
+  }, 0);
+  const linkBadge = linkCount > 0
+    ? `<span class="link-badge" title="Dati condivisi con ${linkCount} sezione${linkCount>1?'i':''} collegata${linkCount>1?'e':''}">🔗 collegato</span>`
+    : '';
+
   const headerHtml = `
     <div class="card-hdr">
       <div class="card-hdr-left">
         ${fantTag(row.fant)}
+        ${linkBadge}
       </div>
       ${isAcc ? `<span class="acc-badge">✓ accettato</span>` : ''}
     </div>
@@ -1123,10 +1224,41 @@ function onInput(el) {
   // 🔥 aggiorna delta live
   updateDelta(sec, row);
 
+  // 🔗 propaga il valore alle sezioni collegate (stesso set di parametri)
+  propagateCrossLinks(sec, row, fid, normalized);
+
   clearTimeout(el._t);
   el._t = setTimeout(() => {
     saveCache(sec, row);
   }, 350);
+}
+
+// Propaga un valore a tutte le card collegate via CROSS_LINKS
+function propagateCrossLinks(secId, rowId, fieldId, value) {
+  const srcKey = `${secId}:${rowId}:${fieldId}`;
+  const dests  = CROSS_LINKS[srcKey] || [];
+  dests.forEach(dstKey => {
+    const [dSecId, dRowId, dFid] = dstKey.split(':');
+    const cKey = `${dSecId}_${dRowId}`;
+    if (!S.cache[cKey]) S.cache[cKey] = { values:{}, accepted:false };
+    // Non sovrascrivere se già accettata
+    if (S.cache[cKey].accepted) return;
+    S.cache[cKey].values[dFid] = value;
+    // Aggiorna visivamente se il campo è visibile nella tab attiva
+    const inputEl = document.querySelector(
+      `[data-sec="${dSecId}"][data-row="${dRowId}"][data-fid="${dFid}"]`
+    );
+    if (inputEl && !inputEl.disabled) {
+      inputEl.value = value;
+      // Flash visivo per segnalare propagazione
+      inputEl.style.transition = 'background .3s';
+      inputEl.style.background = 'rgba(77,159,255,.18)';
+      setTimeout(() => { inputEl.style.background = ''; }, 600);
+    }
+    updateDelta(dSecId, dRowId);
+    clearTimeout(inputEl?._t2);
+    if (inputEl) inputEl._t2 = setTimeout(() => saveCache(dSecId, dRowId), 400);
+  });
 }
 
 function refreshCard(secId, rowId) {
@@ -1162,21 +1294,6 @@ function updateDelta(secId, rowId) {
   deltaEl.innerHTML = renderDelta(sec, vals);
 }
 
-function refreshCard(secId, rowId) {
-
-  const sec = Object.values(QC).flat().find(s => s.id === secId);
-  const row = sec?.rows.find(r => r.id === rowId);
-
-  if (!sec || !row) return;
-
-  const card = document.getElementById(`card_${secId}_${rowId}`);
-
-  if (card) {
-    card.outerHTML = renderCard(sec, row);
-  }
-
-  updateProgress();
-}
 
 // ════════════════════════════════════════════════════
 // PROGRESS
@@ -1316,8 +1433,480 @@ document.getElementById('mc-ok').addEventListener('click', () => {
 });
 
 // ════════════════════════════════════════════════════
-// INIT
+// CHARTS ENGINE (SVG puro, no dipendenze esterne)
 // ════════════════════════════════════════════════════
+
+// ── Palette colori ─────────────────────────────────
+const CH = {
+  acc:  '#4d9fff',
+  ok:   '#34c264',
+  warn: '#f0a500',
+  fail: '#f04f4f',
+  mut:  '#7a86a0',
+  bg3:  getComputedStyle(document.documentElement).getPropertyValue('--bg3').trim() || '#222836',
+  txt:  getComputedStyle(document.documentElement).getPropertyValue('--txt').trim() || '#dde3ef',
+};
+
+function chColors() {
+  const s = getComputedStyle(document.documentElement);
+  return {
+    acc:  s.getPropertyValue('--acc').trim()  || '#4d9fff',
+    ok:   s.getPropertyValue('--ok').trim()   || '#34c264',
+    warn: s.getPropertyValue('--warn').trim() || '#f0a500',
+    fail: s.getPropertyValue('--fail').trim() || '#f04f4f',
+    mut:  s.getPropertyValue('--mut').trim()  || '#7a86a0',
+    bg2:  s.getPropertyValue('--bg2').trim()  || '#181d27',
+    bg3:  s.getPropertyValue('--bg3').trim()  || '#222836',
+    brd:  s.getPropertyValue('--brd').trim()  || '#2e3547',
+    txt:  s.getPropertyValue('--txt').trim()  || '#dde3ef',
+  };
+}
+
+// ── Genera SVG base (contenitore con assi) ──────────
+function svgBase(w, h, children) {
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" xmlns="http://www.w3.org/2000/svg"
+    style="display:block;border-radius:8px;overflow:visible">${children}</svg>`;
+}
+
+// ── Scala lineare ───────────────────────────────────
+function linScale(domain, range) {
+  const [d0,d1] = domain, [r0,r1] = range;
+  return v => (d1 === d0) ? (r0+r1)/2 : r0 + (v-d0)/(d1-d0)*(r1-r0);
+}
+
+// ── Assi e griglia ──────────────────────────────────
+function svgAxes(pad, W, H, xTicks, yTicks, xFmt, yFmt, c) {
+  const gW = W - pad.l - pad.r;
+  const gH = H - pad.t - pad.b;
+  const xS = linScale([0, xTicks.length-1], [pad.l, pad.l+gW]);
+  const yMin = Math.min(...yTicks), yMax = Math.max(...yTicks);
+  const yS = linScale([yMin, yMax], [pad.t+gH, pad.t]);
+
+  let out = '';
+  // Griglia orizzontale
+  yTicks.forEach(y => {
+    const ry = yS(y);
+    out += `<line x1="${pad.l}" y1="${ry}" x2="${pad.l+gW}" y2="${ry}"
+      stroke="${c.brd}" stroke-width="1" stroke-dasharray="3,3"/>`;
+    out += `<text x="${pad.l-6}" y="${ry+4}" text-anchor="end"
+      font-size="9" fill="${c.mut}">${yFmt ? yFmt(y) : y}</text>`;
+  });
+  // Asse X
+  xTicks.forEach((x,i) => {
+    const rx = xS(i);
+    out += `<line x1="${rx}" y1="${pad.t+gH}" x2="${rx}" y2="${pad.t+gH+4}"
+      stroke="${c.brd}" stroke-width="1"/>`;
+    out += `<text x="${rx}" y="${pad.t+gH+14}" text-anchor="middle"
+      font-size="9" fill="${c.mut}" transform="rotate(-30,${rx},${pad.t+gH+14})">${xFmt ? xFmt(x) : x}</text>`;
+  });
+  // Bordo grafico
+  out += `<rect x="${pad.l}" y="${pad.t}" width="${gW}" height="${gH}"
+    fill="none" stroke="${c.brd}" stroke-width="1" rx="3"/>`;
+  return out;
+}
+
+// ── Grafico a linea/punto ───────────────────────────
+function svgLineSeries(xs, ys, xS, yS, color, radius=3, strokeW=2) {
+  let out = '';
+  const pts = xs.map((x,i) => [xS(i), yS(ys[i])]).filter(([,y]) => !isNaN(y));
+  if (pts.length > 1) {
+    out += `<polyline points="${pts.map(p=>p.join(',')).join(' ')}"
+      fill="none" stroke="${color}" stroke-width="${strokeW}" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  pts.forEach(([cx,cy]) => {
+    out += `<circle cx="${cx}" cy="${cy}" r="${radius}" fill="${color}" stroke="none" opacity=".9"/>`;
+  });
+  return out;
+}
+
+// ── Grafico a barre ─────────────────────────────────
+function svgBars(xs, ys, xS, yS, yBase, colorFn, W_bar=12) {
+  let out = '';
+  xs.forEach((_,i) => {
+    const x  = xS(i);
+    const y  = yS(ys[i]);
+    const yb = yS(yBase);
+    const h  = Math.abs(yb - y);
+    const top= Math.min(y, yb);
+    out += `<rect x="${x - W_bar/2}" y="${top}" width="${W_bar}" height="${h}"
+      fill="${colorFn(ys[i])}" rx="2" opacity=".85"/>`;
+  });
+  return out;
+}
+
+// ── Tooltip testo inline ────────────────────────────
+function svgLabel(x, y, text, c, anchor='middle', size=9) {
+  return `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="${size}" fill="${c}">${text}</text>`;
+}
+
+// ════ CHART 1: Trend CTDIvol mis. (Diodo) ══════════
+function chartCTDITrend(secs) {
+  const c  = chColors();
+  const W=340, H=160;
+  const pad={t:14,b:40,l:42,r:12};
+  const gW = W-pad.l-pad.r, gH = H-pad.t-pad.b;
+
+  // Raccogli coppie (label, CTDIvol_mis)
+  const pts = [];
+  secs.forEach(sec => {
+    if (!sec.fields.some(f=>f.isDeltaA)) return;
+    sec.rows.forEach(row => {
+      const v = parseFloat(S.cache[`${sec.id}_${row.id}`]?.values?.ctdi_vol);
+      const label = row.params.find(p=>p.id==='kV')?.val ?? '?';
+      if (!isNaN(v)) pts.push({ label:`${label}kV`, v });
+    });
+  });
+  if (pts.length < 2) return '';
+
+  const vals = pts.map(p=>p.v);
+  const vMin = Math.min(...vals)*0.9, vMax = Math.max(...vals)*1.1;
+  const yTicks = niceYTicks(vMin, vMax, 4);
+  const xS = linScale([0, pts.length-1], [pad.l, pad.l+gW]);
+  const yS = linScale([Math.min(...yTicks), Math.max(...yTicks)], [pad.t+gH, pad.t]);
+
+  let svg = '';
+  svg += svgAxes(pad, W, H, pts.map(p=>p.label), yTicks, x=>x, y=>y.toFixed(1), c);
+  svg += svgLineSeries(pts.map(p=>p.label), vals, xS, yS, c.acc, 4, 2);
+  // Label valori
+  pts.forEach((p,i) => {
+    svg += svgLabel(xS(i), yS(p.v)-7, p.v.toFixed(2), c.acc, 'middle', 8);
+  });
+  svg += svgLabel(W/2, H-2, 'kV acquisizione', c.mut, 'middle', 9);
+
+  return chartCard('Trend CTDIvol misurato', svgBase(W, H, svg));
+}
+
+// ════ CHART 2: Δ% CTDI per riga (bar chart) ════════
+function chartDeltaBars(secs) {
+  const c  = chColors();
+  const W=340, H=180;
+  const pad={t:14,b:50,l:38,r:12};
+  const rows_data = [];
+
+  secs.forEach(sec => {
+    if (!sec.fields.some(f=>f.isDeltaA)) return;
+    sec.rows.forEach(row => {
+      const vals = S.cache[`${sec.id}_${row.id}`]?.values || {};
+      const a = parseFloat(vals.ctdi_vol), b = parseFloat(vals.ctdi_vol_tc);
+      if (isNaN(a)||isNaN(b)||b===0) return;
+      const delta = Math.abs((a-b)/b*100);
+      const kv = row.params.find(p=>p.id==='kV')?.val ?? '?';
+      const ma = row.params.find(p=>p.id==='mA')?.val ?? '?';
+      rows_data.push({ label:`${kv}/${ma}`, delta });
+    });
+  });
+  if (!rows_data.length) return '';
+
+  const maxD = Math.max(...rows_data.map(r=>r.delta), 12);
+  const yTicks = niceYTicks(0, maxD, 4);
+  const gW = W-pad.l-pad.r, gH = H-pad.t-pad.b;
+  const xS = linScale([0, rows_data.length-1], [pad.l, pad.l+gW]);
+  const yS = linScale([0, Math.max(...yTicks)], [pad.t+gH, pad.t]);
+
+  // Bande tolleranza
+  const warnY = yS(S.settings.warn), failY = yS(S.settings.fail);
+
+  let svg = '';
+  // Banda warn→fail
+  svg += `<rect x="${pad.l}" y="${failY}" width="${gW}" height="${warnY-failY}"
+    fill="${c.warn}" opacity=".08"/>`;
+  // Banda >fail
+  svg += `<rect x="${pad.l}" y="${pad.t}" width="${gW}" height="${failY-pad.t}"
+    fill="${c.fail}" opacity=".08"/>`;
+  // Linee soglia
+  svg += `<line x1="${pad.l}" y1="${warnY}" x2="${pad.l+gW}" y2="${warnY}"
+    stroke="${c.warn}" stroke-width="1" stroke-dasharray="4,2"/>`;
+  svg += `<line x1="${pad.l}" y1="${failY}" x2="${pad.l+gW}" y2="${failY}"
+    stroke="${c.fail}" stroke-width="1" stroke-dasharray="4,2"/>`;
+
+  svg += svgAxes(pad, W, H, rows_data.map(r=>r.label), yTicks, x=>x, y=>y.toFixed(1), c);
+
+  const barW = Math.max(6, Math.min(18, gW/rows_data.length*0.6));
+  svg += svgBars(rows_data, rows_data.map(r=>r.delta), xS, yS, 0,
+    v => v > S.settings.fail ? c.fail : v > S.settings.warn ? c.warn : c.ok, barW);
+
+  svg += svgLabel(W/2, H-2, 'kV / mA', c.mut, 'middle', 9);
+  svg += svgLabel(6, pad.t+gH/2, 'Δ%', c.mut, 'middle', 9, `transform="rotate(-90,6,${pad.t+gH/2})"`);
+
+  return chartCard('Δ% CTDIvol per acquisizione', svgBase(W, H, svg));
+}
+
+// ════ CHART 3: kV vs CTDI₁₀₀ (scatter) ════════════
+function chartKvCTDI(secs) {
+  const c = chColors();
+  const W=340, H=160;
+  const pad={t:14,b:38,l:42,r:12};
+  const gW = W-pad.l-pad.r, gH = H-pad.t-pad.b;
+
+  const pts = [];
+  secs.forEach(sec => {
+    const fCTDI = sec.fields.find(f=>f.id==='ctdi100');
+    if (!fCTDI) return;
+    sec.rows.forEach(row => {
+      const kv   = parseFloat(row.params.find(p=>p.id==='kV')?.val);
+      const ctdi = parseFloat(S.cache[`${sec.id}_${row.id}`]?.values?.ctdi100);
+      if (!isNaN(kv) && !isNaN(ctdi)) pts.push({ kv, ctdi });
+    });
+  });
+  if (pts.length < 2) return '';
+
+  const kvs   = [...new Set(pts.map(p=>p.kv))].sort((a,b)=>a-b);
+  const xTicks = kvs;
+  const ctdiVals = pts.map(p=>p.ctdi);
+  const yTicks = niceYTicks(Math.min(...ctdiVals)*0.85, Math.max(...ctdiVals)*1.15, 4);
+  const xS = linScale([Math.min(...kvs), Math.max(...kvs)], [pad.l, pad.l+gW]);
+  const yS = linScale([Math.min(...yTicks), Math.max(...yTicks)], [pad.t+gH, pad.t]);
+
+  let svg = '';
+  svg += svgAxes(pad, W, H,
+    kvs, yTicks,
+    x=>`${x}kV`, y=>y.toFixed(1), c);
+
+  // Raggruppa per fantoccio
+  const byFant = {};
+  secs.forEach(sec => {
+    const fCTDI = sec.fields.find(f=>f.id==='ctdi100');
+    if (!fCTDI) return;
+    sec.rows.forEach(row => {
+      const kv   = parseFloat(row.params.find(p=>p.id==='kV')?.val);
+      const ctdi = parseFloat(S.cache[`${sec.id}_${row.id}`]?.values?.ctdi100);
+      if (isNaN(kv)||isNaN(ctdi)) return;
+      const f = row.fant || 'aria';
+      if (!byFant[f]) byFant[f] = [];
+      byFant[f].push({kv,ctdi});
+    });
+  });
+  const fantColors = { head:c.acc, body:c.warn, aria:c.ok };
+  Object.entries(byFant).forEach(([fant, fpts]) => {
+    fpts.sort((a,b)=>a.kv-b.kv);
+    const col = fantColors[fant] || c.mut;
+    if (fpts.length>1) {
+      svg += `<polyline points="${fpts.map(p=>`${xS(p.kv)},${yS(p.ctdi)}`).join(' ')}"
+        fill="none" stroke="${col}" stroke-width="1.5" stroke-dasharray="5,3" opacity=".5"/>`;
+    }
+    fpts.forEach(p => {
+      svg += `<circle cx="${xS(p.kv)}" cy="${yS(p.ctdi)}" r="4"
+        fill="${col}" stroke="${c.bg2}" stroke-width="1.5" opacity=".9"/>`;
+    });
+    // Legenda
+    const yi = Object.keys(byFant).indexOf(fant);
+    svg += `<circle cx="${pad.l+8}" cy="${pad.t+8+yi*14}" r="4" fill="${col}"/>`;
+    svg += svgLabel(pad.l+16, pad.t+12+yi*14, fant.toUpperCase(), col, 'start', 9);
+  });
+
+  svg += svgLabel(W/2, H-1, 'kV', c.mut, 'middle', 9);
+
+  return chartCard('CTDI₁₀₀ vs kV', svgBase(W, H, svg));
+}
+
+// ════ CHART 4: Riproducibilità (misure ripetute 120kV) ══
+function chartReproducibility(secs) {
+  const c = chColors();
+  const W=340, H=150;
+  const pad={t:14,b:36,l:42,r:12};
+  const gW = W-pad.l-pad.r, gH = H-pad.t-pad.b;
+
+  // Prende le prime 3 misure identiche (stessa firma params)
+  const groups = {};
+  secs.forEach(sec => {
+    sec.rows.forEach(row => {
+      const sig = paramsSignature(row.params);
+      const vals = S.cache[`${sec.id}_${row.id}`]?.values || {};
+      // Usa il primo campo numerico disponibile
+      const firstField = sec.fields.find(f => !f.isDeltaB && !f.isTCdisplay);
+      if (!firstField) return;
+      const v = parseFloat(vals[firstField.id]);
+      if (isNaN(v)) return;
+      if (!groups[sig]) groups[sig] = { label: firstField.label, vals: [] };
+      groups[sig].vals.push(v);
+    });
+  });
+
+  // Prende solo gruppi con almeno 2 misure
+  const repGroups = Object.entries(groups).filter(([,g])=>g.vals.length>=2).slice(0,5);
+  if (!repGroups.length) return '';
+
+  const allVals = repGroups.flatMap(([,g])=>g.vals);
+  const spread  = Math.max(...allVals) - Math.min(...allVals);
+  const yMin    = Math.min(...allVals) - spread*0.3;
+  const yMax    = Math.max(...allVals) + spread*0.3;
+  const yTicks  = niceYTicks(yMin, yMax, 4);
+  const xS = linScale([0, repGroups.length-1], [pad.l, pad.l+gW]);
+  const yS = linScale([Math.min(...yTicks), Math.max(...yTicks)], [pad.t+gH, pad.t]);
+
+  let svg = '';
+  svg += svgAxes(pad, W, H,
+    repGroups.map((_,i)=>`Set ${i+1}`), yTicks,
+    x=>x, y=>y.toFixed(2), c);
+
+  repGroups.forEach(([,g], gi) => {
+    const mean = g.vals.reduce((a,b)=>a+b,0)/g.vals.length;
+    const cx   = xS(gi);
+    // Barra range
+    const yLo = yS(Math.min(...g.vals)), yHi = yS(Math.max(...g.vals));
+    svg += `<line x1="${cx}" y1="${yLo}" x2="${cx}" y2="${yHi}"
+      stroke="${c.acc}" stroke-width="2" opacity=".4"/>`;
+    // Punti
+    g.vals.forEach((v,vi) => {
+      const col = vi===0 ? c.acc : vi===1 ? c.ok : c.warn;
+      svg += `<circle cx="${cx + (vi-1)*8}" cy="${yS(v)}" r="4"
+        fill="${col}" stroke="${c.bg2}" stroke-width="1.5"/>`;
+    });
+    // Media
+    svg += `<line x1="${cx-10}" y1="${yS(mean)}" x2="${cx+10}" y2="${yS(mean)}"
+      stroke="${c.txt}" stroke-width="1.5" opacity=".6"/>`;
+  });
+  svg += svgLabel(W/2, H-1, 'Gruppo misure ripetute', c.mut, 'middle', 9);
+
+  return chartCard('Riproducibilità (misure ripetute)', svgBase(W, H, svg));
+}
+
+// ════ CHART 5: Δ% Collimazione ══════════════════════
+function chartCollimazione(secs) {
+  const c = chColors();
+  const collSec = secs.find(s => s.isColl);
+  if (!collSec) return '';
+
+  const W=340, H=160;
+  const pad={t:14,b:42,l:38,r:12};
+  const gW = W-pad.l-pad.r, gH = H-pad.t-pad.b;
+
+  const pts = collSec.rows.map(row => {
+    const nom = parseFloat(row.params.find(p=>p.id==='nom')?.val);
+    const mis = parseFloat(S.cache[`${collSec.id}_${row.id}`]?.values?.coll_mis);
+    const delta = (!isNaN(nom)&&!isNaN(mis)&&nom>0) ? Math.abs((mis-nom)/nom*100) : null;
+    return { nom, delta };
+  }).filter(p => p.delta !== null);
+
+  if (!pts.length) return '';
+
+  const maxD   = Math.max(...pts.map(p=>p.delta), S.settings.fail*1.2);
+  const yTicks = niceYTicks(0, maxD, 4);
+  const xS = linScale([0, pts.length-1], [pad.l, pad.l+gW]);
+  const yS = linScale([0, Math.max(...yTicks)], [pad.t+gH, pad.t]);
+  const warnY = yS(S.settings.warn), failY = yS(S.settings.fail);
+
+  let svg = '';
+  svg += `<rect x="${pad.l}" y="${failY}" width="${gW}" height="${warnY-failY}" fill="${c.warn}" opacity=".08"/>`;
+  svg += `<rect x="${pad.l}" y="${pad.t}" width="${gW}" height="${failY-pad.t}" fill="${c.fail}" opacity=".08"/>`;
+  svg += `<line x1="${pad.l}" y1="${warnY}" x2="${pad.l+gW}" y2="${warnY}" stroke="${c.warn}" stroke-width="1" stroke-dasharray="4,2"/>`;
+  svg += `<line x1="${pad.l}" y1="${failY}" x2="${pad.l+gW}" y2="${failY}" stroke="${c.fail}" stroke-width="1" stroke-dasharray="4,2"/>`;
+
+  svg += svgAxes(pad, W, H,
+    pts.map(p=>`${p.nom}mm`), yTicks, x=>x, y=>y.toFixed(1), c);
+
+  const barW = Math.max(8, Math.min(22, gW/pts.length*0.6));
+  pts.forEach((p,i) => {
+    const x   = xS(i), y = yS(p.delta), yb = yS(0);
+    const col = p.delta > S.settings.fail ? c.fail : p.delta > S.settings.warn ? c.warn : c.ok;
+    svg += `<rect x="${x-barW/2}" y="${y}" width="${barW}" height="${yb-y}" fill="${col}" rx="2" opacity=".85"/>`;
+    svg += svgLabel(x, y-4, `${p.delta.toFixed(1)}%`, col, 'middle', 8);
+  });
+  svg += svgLabel(W/2, H-1, 'Nominale collimatore', c.mut, 'middle', 9);
+
+  return chartCard('Δ% Collimazione geometrica', svgBase(W, H, svg));
+}
+
+// ════ CHART 6: Rumore σ vs Livello iterazione ══════
+function chartNoise(secs) {
+  const c = chColors();
+  const ric1 = secs.find(s=>s.id==='ric1'||s.id==='ric1');
+  const ric2 = secs.find(s=>s.id==='ric2');
+  if (!ric1 && !ric2) return '';
+
+  const W=340, H=160;
+  const pad={t:14,b:36,l:42,r:12};
+  const gW = W-pad.l-pad.r, gH = H-pad.t-pad.b;
+
+  const series = [];
+  [ric1, ric2].filter(Boolean).forEach((sec, si) => {
+    const pts = sec.rows.map(row => {
+      const lvl   = parseFloat(row.params.find(p=>p.id==='livello%')?.val);
+      const rumore= parseFloat(S.cache[`${sec.id}_${row.id}`]?.values?.rumore);
+      return { lvl, rumore };
+    }).filter(p=>!isNaN(p.lvl)&&!isNaN(p.rumore));
+    if (pts.length) series.push({ pts, label:`Serie ${si+1}`, color: si===0 ? c.acc : c.ok });
+  });
+  if (!series.length) return '';
+
+  const allVals = series.flatMap(s=>s.pts.map(p=>p.rumore));
+  const yTicks  = niceYTicks(Math.min(...allVals)*0.85, Math.max(...allVals)*1.15, 4);
+  const xTicks  = [0,10,20,30,40,50,60,70,80,90,100];
+  const xS = linScale([0,100], [pad.l, pad.l+gW]);
+  const yS = linScale([Math.min(...yTicks), Math.max(...yTicks)], [pad.t+gH, pad.t]);
+
+  let svg = '';
+  svg += svgAxes(pad, W, H, xTicks, yTicks, x=>`${x}%`, y=>y.toFixed(1), c);
+
+  series.forEach(({pts, label, color}, si) => {
+    pts.sort((a,b)=>a.lvl-b.lvl);
+    if (pts.length>1) {
+      svg += `<polyline points="${pts.map(p=>`${xS(p.lvl)},${yS(p.rumore)}`).join(' ')}"
+        fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>`;
+    }
+    pts.forEach(p => {
+      svg += `<circle cx="${xS(p.lvl)}" cy="${yS(p.rumore)}" r="3" fill="${color}"/>`;
+    });
+    svg += `<circle cx="${pad.l+8}" cy="${pad.t+8+si*14}" r="3" fill="${color}"/>`;
+    svg += svgLabel(pad.l+16, pad.t+12+si*14, label, color, 'start', 9);
+  });
+  svg += svgLabel(W/2, H-1, 'Livello iterazione (%)', c.mut, 'middle', 9);
+
+  return chartCard('Rumore σ vs Livello iterazione', svgBase(W, H, svg));
+}
+
+// ── Utility: nice ticks ─────────────────────────────
+function niceYTicks(min, max, n) {
+  if (min === max) { min -= 1; max += 1; }
+  const raw  = (max - min) / (n - 1);
+  const mag  = Math.pow(10, Math.floor(Math.log10(raw)));
+  const nice = [1,2,2.5,5,10].map(f=>f*mag).find(f=>f>=raw) || raw;
+  const lo   = Math.floor(min/nice)*nice;
+  const ticks = [];
+  for (let i=0; i<=n+1; i++) {
+    const v = parseFloat((lo + i*nice).toPrecision(6));
+    if (v >= min-nice*0.01 && v <= max+nice*0.01) ticks.push(v);
+  }
+  if (ticks.length < 2) { ticks.unshift(min); ticks.push(max); }
+  return ticks;
+}
+
+// ── Card contenitore chart ──────────────────────────
+function chartCard(title, svgHtml) {
+  return `<div style="background:var(--bg2);border:1px solid var(--brd);border-radius:10px;
+    padding:13px;margin-bottom:12px">
+    <div style="font-weight:700;font-size:.85rem;margin-bottom:10px;color:var(--txt)">${title}</div>
+    <div style="overflow:hidden">${svgHtml}</div>
+  </div>`;
+}
+
+// ── Render principale grafici ───────────────────────
+function renderCharts() {
+  if (!S.session) return;
+  const secs = QC[S.session.type] || [];
+  const lbl  = {accettazione:'Accettazione',semestrale:'Costanza Semestrale',annuale:'Stato Annuale'}[S.session.type];
+  document.getElementById('charts-sub').textContent =
+    `${S.session.machine} – ${lbl} – ${S.session.date}`;
+
+  const charts = [
+    chartCTDITrend(secs),
+    chartDeltaBars(secs),
+    chartKvCTDI(secs),
+    chartReproducibility(secs),
+    chartCollimazione(secs),
+    chartNoise(secs),
+  ].filter(Boolean);
+
+  const el = document.getElementById('charts-content');
+  if (!charts.length) {
+    el.innerHTML = `<div class="empty"><div class="ico">📊</div>
+      <p>Nessun dato sufficiente per i grafici.<br>
+      <span style="font-size:.8rem">Inserisci alcune misure e torna qui.</span></p></div>`;
+  } else {
+    el.innerHTML = charts.join('');
+  }
+}
+
 function init() {
   applyTheme(localStorage.getItem('tcqc-theme') === 'light' ? 'light' : 'dark');
   // Logo istituzionale
