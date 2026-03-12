@@ -495,6 +495,10 @@ button { cursor: pointer; }
   .s-warn { color: #8a5c00; }
   .s-fail { color: #a00; }
 }
+.autofilled {
+  background: rgba(77,159,255,.15);
+  border-left: 3px solid #4d9fff;
+}
 </style>
 </head>
 <body>
@@ -1017,79 +1021,122 @@ const QC_DEF = {
 
 };
 
-// ═══════════════════════════════════════════════════════════════════════
-// CROSS-CONTROL LINK MAP
-// Collega automaticamente i campi condivisi tra sezioni di tipo di
-// controllo diverso (accettazione / costanza / stato) che hanno
-// gli stessi parametri di esposizione (kV, mA, coll_mm, pitch, rot_s, fov).
-// Struttura: 'srcSecId:srcRowId:fieldId' → ['dstSecId:dstRowId:fieldId', ...]
-// ═══════════════════════════════════════════════════════════════════════
-function _paramsSignature(params) {
-  return params
-    .filter(p => ['kV','mA','coll_mm','pitch','rot_s','fov'].includes(p.id))
-    .map(p => `${p.id}=${p.val}`)
-    .sort()
-    .join('|');
-}
 
-const CROSS_LINKS = (function buildCrossLinks() {
-  const links = {};
-  const entries = [];
-  Object.entries(QC_DEF).forEach(([ctrlType, secs]) => {
-    secs.forEach(sec => {
-      const rows = sec.defaultRows;
-      rows.forEach(row => {
-        entries.push({ ctrlType, sec, row, sig: _paramsSignature(row.params) });
-      });
-    });
+
+function debugCache() {
+
+  console.log("=== CACHE RIPRODUCIBILITÀ ===");
+
+  ["st_r1","st_r2","st_r3"].forEach(r => {
+    const key = `stato_riprod_${r}`;
+    console.log(key, S.cache?.[key]);
   });
 
-  entries.forEach(a => {
-    entries.forEach(b => {
-      if (a === b || a.ctrlType === b.ctrlType || !a.sig || a.sig !== b.sig) return;
-      const aFids = new Set(a.sec.fields.map(f => f.id));
-      const bFids = new Set(b.sec.fields.map(f => f.id));
-      [...aFids].filter(fid => bFids.has(fid)).forEach(fid => {
-        const srcKey = `${a.sec.id}:${a.row.id}:${fid}`;
-        const dstKey = `${b.sec.id}:${b.row.id}:${fid}`;
-        if (!links[srcKey]) links[srcKey] = [];
-        if (!links[srcKey].includes(dstKey)) links[srcKey].push(dstKey);
-      });
-    });
-  });
-  return links;
-})();
+  console.log("=== CACHE TARGET ===");
+  console.log("stato_lin_mas_mas_100", S.cache?.["stato_lin_mas_mas_100"]);
 
-// Conta quanti link escono da una card (per il badge)
-function countCardLinks(secId, rowId, fields) {
-  return fields.reduce((n, f) => {
-    const k = `${secId}:${rowId}:${f.id}`;
-    return n + (CROSS_LINKS[k]?.length || 0);
-  }, 0);
 }
 
-// Propaga un valore alle card collegate visibili nel DOM
-function propagateCrossLinks(secId, rowId, fieldId, value) {
-  const srcKey = `${secId}:${rowId}:${fieldId}`;
-  (CROSS_LINKS[srcKey] || []).forEach(dstKey => {
-    const [dSecId, dRowId, dFid] = dstKey.split(':');
-    const cKey = `${dSecId}_${dRowId}`;
-    if (!S.cache[cKey]) S.cache[cKey] = { values:{}, accepted:false, accepted_at:'' };
-    if (S.cache[cKey].accepted) return;  // non sovrascrivere card già accettate
-    S.cache[cKey].values[dFid] = value;
-    // Aggiorna campo visibile se presente nel DOM
-    const inputEl = document.querySelector(
-      `[data-sec="${dSecId}"][data-row="${dRowId}"][data-fid="${dFid}"]`
+// ═══════════════════════════════════════════════════════════════════════
+// CROSS CONTROL PROPAGATION
+// Riproducibilità → Linearità mAs (100 mA)
+// media delle 3 misure
+// ═══════════════════════════════════════════════════════════════════════
+
+const PROPAGATED_FIELDS = [
+  "ctdi100",
+  "ctdi_w",
+  "ctdi_vol",
+  "ctdi_vol_tc"
+];
+
+function propagateCrossRules(){
+
+  const SRC_SEC  = "stato_riprod";
+  const SRC_ROWS = ["st_r1","st_r2","st_r3"];
+
+  const TGT_SEC  = "stato_lin_mas";
+  const TGT_ROW  = "mas_100";
+
+  const tgtKey = `${TGT_SEC}_${TGT_ROW}`;
+
+  ensureCache(TGT_SEC, TGT_ROW);
+
+  PROPAGATED_FIELDS.forEach(fid => {
+
+    const values = [];
+
+    // raccolta valori dalle tre misure
+    SRC_ROWS.forEach(r => {
+
+      const key = `${SRC_SEC}_${r}`;
+      const raw = S.cache?.[key]?.values?.[fid];
+
+      if(raw !== undefined && raw !== "" && !isNaN(raw)){
+        values.push(parseFloat(raw));
+      }
+
+    });
+
+    // se non ho tutte le misure non faccio nulla
+    if(values.length !== SRC_ROWS.length) return;
+
+    // calcolo media
+    let mean = values.reduce((a,b)=>a+b,0) / values.length;
+
+    // arrotondamento a 2 decimali
+    mean = Math.round(mean * 100) / 100;
+
+    if(!S.cache[tgtKey].values)
+      S.cache[tgtKey].values = {};
+
+    if(!S.cache[tgtKey].derived)
+	S.cache[tgtKey].derived = {};
+
+	S.cache[tgtKey].values[fid] = mean;
+	S.cache[tgtKey].derived[fid] = "mean_riproducibilita";
+
+    const input = document.querySelector(
+      `[data-sec="${TGT_SEC}"][data-row="${TGT_ROW}"][data-fid="${fid}"]`
     );
-    if (inputEl && !inputEl.disabled) {
-      inputEl.value = value;
-      inputEl.style.transition = 'background .35s';
-      inputEl.style.background = 'rgba(77,159,255,.18)';
-      setTimeout(() => { inputEl.style.background = ''; }, 700);
-      updateDelta(dSecId, dRowId);
+
+    if(!input){
+      console.warn("campo target non trovato:", fid);
+      return;
     }
+
+    // scrittura valore
+    input.value = mean.toFixed(2);
+
+    // evidenza visiva campo auto-compilato
+    input.classList.add("autofilled");
+    input.title =
+  "Valore derivato dalla media delle misure di riproducibilità\n" +
+  input.title;
+
+    // highlight temporaneo
+    input.style.transition = "background .35s";
+    input.style.background = "rgba(77,159,255,.18)";
+
+    setTimeout(()=>{
+      input.style.background = "";
+    },700);
+
   });
+
+  refreshCard(TGT_SEC, TGT_ROW);
+
 }
+
+function countCardLinks(secId,rowId){
+
+  if(secId === "stato_riprod" && ["st_r1","st_r2","st_r3"].includes(rowId)){
+    return PROPAGATED_FIELDS.length;
+  }
+
+  return 0;
+}
+
 
 // ═══════════════════════════════════════════════════════════════════════
 // STATE
@@ -1396,6 +1443,11 @@ function renderActiveTab() {
 // ═══════════════════════════════════════════════════════════════════════
 // SECTION BLOCK & CARDS
 // ═══════════════════════════════════════════════════════════════════════
+
+
+
+
+
 function renderSecBlock(sec) {
   const rows = getSectionRows(sec);
   return `
@@ -1624,6 +1676,7 @@ function renderField(secId, rowId, field, currentVal, isAccepted, row) {
   const val = currentVal != null && currentVal !== '' ? currentVal : '';
   const valStatus = field.collMeas ? computeCollDelta(row, val) : 'none';
   const inputCls = valStatus !== 'none' ? `vi-${valStatus}` : '';
+  const cache = S.cache?.[`${secId}_${rowId}`];
 
   if (field.type === 'bool') {
     return `<div class="igroup" style="grid-column:1/-1">
@@ -1672,7 +1725,13 @@ function renderField(secId, rowId, field, currentVal, isAccepted, row) {
   }
 
   const phAttr = prevVal !== '' ? `placeholder="${prevVal}"` : '';
-  const titleAttr = prevVal !== '' ? `title="Ultima misura accettata: ${prevVal}"` : '';
+	  let titleAttr = '';
+
+	if(prevVal !== '')
+	  titleAttr = `title="Ultima misura accettata: ${prevVal}"`;
+
+	if(cache?.derived?.[field.id])
+	  titleAttr = `title="Valore calcolato dalla media delle misure di riproducibilità"`;
   const prevBadge = prevVal !== '' ? `<span class="iprev" title="Ultima: ${prevVal}">↩ ${prevVal}</span>` : '';
 
   return `<div class="igroup">
@@ -1793,33 +1852,35 @@ function onInputChange(input, doRefresh = false) {
   const row = input.dataset.row;
   const fid = input.dataset.fid;
 
-  // 1️⃣ Prendi il valore così com'è (NON modificarlo nel campo)
+  // 1️⃣ valore inserito
   const raw = input.value;
 
-  // 2️⃣ Normalizza solo per il salvataggio (virgola → punto)
+  // 2️⃣ normalizzazione per storage
   const normalized = raw.replace(",", ".");
 
   ensureCache(sec, row);
 
-  // 3️⃣ Salva la versione normalizzata nei dati
+  // 3️⃣ salva valore
   S.cache[`${sec}_${row}`].values[fid] = normalized;
 
-  // 🔗 Propaga il valore alle sezioni collegate (stesso set parametri esposizione)
-  propagateCrossLinks(sec, row, fid, normalized);
-
-  // 4️⃣ Ricalcola % vs media per sezioni con isReprod
+  // 4️⃣ aggiorna riproducibilità (media + deviazione %)
   recomputeReprod(sec);
 
-  // 5️⃣ Salvataggio debounced
+  // 5️⃣ aggiorna eventuali dipendenze tra card
+  propagateCrossRules();
+
+  // 6️⃣ autosave debounced
   clearTimeout(input._saveTimer);
+
   input._saveTimer = setTimeout(() => {
     saveMeasurement(sec, row);
   }, 400);
 
-  // 6️⃣ Refresh SOLO su blur (quando doRefresh = true)
+  // 7️⃣ refresh UI solo su blur
   if (doRefresh) {
     refreshCard(sec, row);
   }
+
 }
 
 /**
@@ -1887,13 +1948,46 @@ async function saveMeasurement(secId, rowId) {
 }
 
 function refreshCard(secId, rowId) {
+
   const sec = getSecDef(secId);
   const rows = getSectionRows(sec);
-  const row = rows.find(r=>r.id===rowId);
+  const row = rows.find(r => r.id === rowId);
+
   if (!sec || !row) return;
-  const cardEl = document.getElementById(`card_${secId}_${rowId}`);
+
+  const cardId = `card_${secId}_${rowId}`;
+  const cardEl = document.getElementById(cardId);
+
   if (!cardEl) return;
+
+  // ricrea la card
   cardEl.outerHTML = renderCard(sec, row);
+
+  // recupera cache
+  const key = `${secId}_${rowId}`;
+  const cache = S.cache?.[key];
+
+  if (cache?.values) {
+
+    Object.entries(cache.values).forEach(([fid,val]) => {
+
+      const input = document.querySelector(
+        `[data-sec="${secId}"][data-row="${rowId}"][data-fid="${fid}"]`
+      );
+
+      if(!input) return;
+
+      input.value = Number(val).toFixed(2);
+
+      if(cache?.derived?.[fid]){
+        input.classList.add("autofilled");
+        input.title = "Valore calcolato automaticamente";
+      }
+
+    });
+
+  }
+
   updateProgress();
   renderTabs();
 }
@@ -2911,6 +3005,9 @@ async function init() {
     showView('welcome');
   }
 }
+
+
+
 
 init();
 </script>
