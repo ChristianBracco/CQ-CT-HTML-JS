@@ -2846,9 +2846,20 @@ function buildSvgChart(cfg) {
       fill="var(--accent)" font-size="8">⌀</text>`;
   }
 
-  // ── Dataset
+  // ── Defs: gradienti per ogni dataset (solo line chart)
   const PALETTE=['#4d9fff','#34c264','#f0a500','#f04f4f','#a78bfa','#38bdf8'];
   const nDs = cfg.datasets.length;
+  let defs = '<defs>';
+  cfg.datasets.forEach((ds,di) => {
+    const col = ds.color || PALETTE[di%PALETTE.length];
+    defs += `<linearGradient id="scGrad${di}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="${col}" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="${col}" stop-opacity="0.03"/>
+    </linearGradient>`;
+  });
+  defs += '</defs>';
+  svg = defs + svg;
+
   const barSlotW = cW/n;
   const barW = Math.min(barSlotW*0.65/Math.max(nDs,1), 30);
 
@@ -2866,33 +2877,62 @@ function buildSvgChart(cfg) {
         const by = toY(v);
         const bh = Math.abs(yBase-by);
         if(bh<0.5) return;
-        // colore individuale se passato come array
-        const bc = Array.isArray(ds.colors) ? (ds.colors[i]||col) : col;
+        // colore individuale se passato come array; colora per deviazione dalla refLine
+        let bc = Array.isArray(ds.colors) ? (ds.colors[i]||col) : col;
+        if(cfg.refLine!=null){
+          const delta = Math.abs((v-cfg.refLine)/cfg.refLine*100);
+          if(cfg.failThresh!=null && delta>cfg.failThresh) bc='#f04f4f';
+          else if(cfg.warnThresh!=null && delta>cfg.warnThresh) bc='#f0a500';
+        }
         svg += `<rect x="${bx.toFixed(1)}" y="${Math.min(by,yBase).toFixed(1)}"
           width="${barW.toFixed(1)}" height="${bh.toFixed(1)}"
-          fill="${bc}" opacity=".85" rx="1"/>`;
-        // valore sopra la barra (solo se c'è spazio)
-        if(toY(v)-P.t > 12)
+          fill="${bc}" opacity=".88" rx="2">
+          <title>${ds.label||''} ${cfg.labels[i]}: ${v}${cfg.yLabel?' '+cfg.yLabel:''}</title>
+        </rect>`;
+        if(bh>14)
           svg += `<text x="${(bx+barW/2).toFixed(1)}" y="${(Math.min(by,yBase)-3).toFixed(1)}"
-            text-anchor="middle" fill="${bc}" font-size="8">${v.toFixed(2)}</text>`;
+            text-anchor="middle" fill="${bc}" font-size="8" font-weight="700">${v.toFixed(2)}</text>`;
       });
     } else {
-      // Linea
+      // Area fill con gradiente sotto la linea (solo serie non-dashed)
+      if(!ds.dashed){
+        const areaPts = ds.data.map((v,i) => v!=null&&!isNaN(v) ? `${toX(i).toFixed(1)},${toY(v).toFixed(1)}` : null);
+        const validIdx = areaPts.map((p,i)=>p?i:null).filter(i=>i!==null);
+        if(validIdx.length>1){
+          const first=validIdx[0], last=validIdx[validIdx.length-1];
+          const areaPath = `M${toX(first).toFixed(1)},${(P.t+cH).toFixed(1)} `+
+            validIdx.map(i=>`L${toX(i).toFixed(1)},${toY(ds.data[i]).toFixed(1)}`).join(' ')+
+            ` L${toX(last).toFixed(1)},${(P.t+cH).toFixed(1)} Z`;
+          svg += `<path d="${areaPath}" fill="url(#scGrad${di})"/>`;
+        }
+      }
+      // Linea principale
       const pts = ds.data
         .map((v,i) => v!=null&&!isNaN(v) ? `${toX(i).toFixed(1)},${toY(v).toFixed(1)}` : null)
         .filter(Boolean);
       if(pts.length>1)
         svg += `<polyline points="${pts.join(' ')}" fill="none" stroke="${col}"
-          stroke-width="${ds.dashed?1.5:2}" stroke-linejoin="round" ${dashAttr}/>`;
+          stroke-width="${ds.dashed?1.5:2.2}" stroke-linejoin="round" stroke-linecap="round" ${dashAttr}/>`;
+      // Punti — colorati per deviazione dalla refLine
       ds.data.forEach((v,i)=>{
         if(v==null||isNaN(v)) return;
+        let ptCol = col;
+        let deltaStr = '';
+        if(cfg.refLine!=null){
+          const delta=(v-cfg.refLine)/cfg.refLine*100;
+          deltaStr=` Δ=${delta>=0?'+':''}${delta.toFixed(1)}%`;
+          const absDelta=Math.abs(delta);
+          if(cfg.failThresh!=null && absDelta>cfg.failThresh) ptCol='#f04f4f';
+          else if(cfg.warnThresh!=null && absDelta>cfg.warnThresh) ptCol='#f0a500';
+        }
         const cx=toX(i).toFixed(1), cy=toY(v).toFixed(1);
         svg += `<circle cx="${cx}" cy="${cy}" r="${ds.dashed?2.5:4}"
-          fill="${col}" stroke="var(--bg2)" stroke-width="1.5"/>`;
-        // etichetta valore: solo serie primarie (non fit/dashed), solo se spazio
+          fill="${ptCol}" stroke="var(--bg2)" stroke-width="1.5">
+          <title>${ds.label||''} ${cfg.labels[i]}: ${v}${cfg.yLabel?' '+cfg.yLabel:''}${deltaStr}</title>
+        </circle>`;
         if(!ds.dashed && toY(v)-P.t>14)
           svg += `<text x="${cx}" y="${(toY(v)-7).toFixed(1)}"
-            text-anchor="middle" fill="${col}" font-size="8">${v.toFixed(2)}</text>`;
+            text-anchor="middle" fill="${ptCol}" font-size="8" font-weight="700">${v.toFixed(2)}</text>`;
       });
     }
 
