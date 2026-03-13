@@ -496,8 +496,45 @@ button { cursor: pointer; }
   .s-fail { color: #a00; }
 }
 .autofilled {
-  background: rgba(77,159,255,.15);
-  border-left: 3px solid #4d9fff;
+  background: rgba(77,159,255,.12) !important;
+  border-left: 3px solid var(--accent) !important;
+  color: var(--accent);
+  cursor: default;
+}
+.autofilled:focus { outline: none; box-shadow: 0 0 0 2px rgba(77,159,255,.3); }
+
+/* ── Badge analisi ─────────────────────────────── */
+.anal-badge {
+  display:inline-flex; align-items:center; gap:4px;
+  font-size:.72rem; font-weight:700; padding:2px 9px;
+  border-radius:6px; border:1px solid; margin-right:5px; margin-bottom:4px;
+}
+.b-ok   { border-color:var(--ok);   background:var(--ok-bg);   color:var(--ok);   }
+.b-warn { border-color:var(--warn); background:var(--warn-bg); color:var(--warn); }
+.b-fail { border-color:var(--fail); background:var(--fail-bg); color:var(--fail); }
+/* ── Tab grafici ────────────────────────────────── */
+.rpt-gtabs {
+  display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px;
+}
+.rpt-gtab {
+  padding:5px 14px; border-radius:20px; font-size:.8rem;
+  font-weight:600; border:1px solid var(--border); background:var(--bg3);
+  color:var(--muted); cursor:pointer; transition:all .15s;
+}
+.rpt-gtab.active { background:var(--accent); border-color:var(--accent); color:#0f1117; }
+[data-theme="light"] .rpt-gtab.active { color:#fff; }
+.rpt-gtab-pane { display:none; }
+.rpt-gtab-pane.active { display:block; }
+/* ── Tabella riepilogo in chart ─────────────────── */
+.rpt-ctable {
+  width:100%; font-size:.78rem; border-collapse:collapse; margin-top:10px;
+}
+.rpt-ctable th { color:var(--muted); font-weight:600; text-align:left; padding:3px 6px; }
+.rpt-ctable td { padding:3px 6px; border-top:1px solid var(--border); }
+@media print {
+  .rpt-gtabs { display:none; }
+  .rpt-gtab-pane { display:block !important; }
+  .rpt-ctable td, .rpt-ctable th { border-color:#ccc; }
 }
 </style>
 </head>
@@ -1039,8 +1076,8 @@ function debugCache() {
 
 // ═══════════════════════════════════════════════════════════════════════
 // CROSS CONTROL PROPAGATION
-// Riproducibilità → Linearità mAs (100 mA)
-// media delle 3 misure
+// Stato:    riproducibilità (3 mis.) → linearità mAs (100 mA)
+// Costanza: riproducibilità (3 mis.) → var_kv (120 kV) campo ctdi100
 // ═══════════════════════════════════════════════════════════════════════
 
 const PROPAGATED_FIELDS = [
@@ -1050,90 +1087,81 @@ const PROPAGATED_FIELDS = [
   "ctdi_vol_tc"
 ];
 
-function propagateCrossRules(){
-
-  const SRC_SEC  = "stato_riprod";
-  const SRC_ROWS = ["st_r1","st_r2","st_r3"];
-
-  const TGT_SEC  = "stato_lin_mas";
-  const TGT_ROW  = "mas_100";
-
-  const tgtKey = `${TGT_SEC}_${TGT_ROW}`;
-
-  ensureCache(TGT_SEC, TGT_ROW);
-
-  PROPAGATED_FIELDS.forEach(fid => {
-
-    const values = [];
-
-    // raccolta valori dalle tre misure
-    SRC_ROWS.forEach(r => {
-
-      const key = `${SRC_SEC}_${r}`;
-      const raw = S.cache?.[key]?.values?.[fid];
-
-      if(raw !== undefined && raw !== "" && !isNaN(raw)){
-        values.push(parseFloat(raw));
-      }
-
-    });
-
-    // se non ho tutte le misure non faccio nulla
-    if(values.length !== SRC_ROWS.length) return;
-
-    // calcolo media
-    let mean = values.reduce((a,b)=>a+b,0) / values.length;
-
-    // arrotondamento a 2 decimali
-    mean = Math.round(mean * 100) / 100;
-
-    if(!S.cache[tgtKey].values)
-      S.cache[tgtKey].values = {};
-
-    if(!S.cache[tgtKey].derived)
-	S.cache[tgtKey].derived = {};
-
-	S.cache[tgtKey].values[fid] = mean;
-	S.cache[tgtKey].derived[fid] = "mean_riproducibilita";
-
-    const input = document.querySelector(
-      `[data-sec="${TGT_SEC}"][data-row="${TGT_ROW}"][data-fid="${fid}"]`
-    );
-
-    if(!input){
-      console.warn("campo target non trovato:", fid);
-      return;
-    }
-
-    // scrittura valore
+// Helper riutilizzabile: propaga media srcFid → tgtFid
+function _propagateMean(srcSec, srcRows, srcFid, tgtSec, tgtRow, tgtFid) {
+  const values = srcRows
+    .map(r => parseFloat(S.cache?.[`${srcSec}_${r}`]?.values?.[srcFid]))
+    .filter(v => !isNaN(v));
+  if (values.length !== srcRows.length) return;
+  const mean = Math.round(values.reduce((a,b)=>a+b,0) / values.length * 100) / 100;
+  ensureCache(tgtSec, tgtRow);
+  if (!S.cache[`${tgtSec}_${tgtRow}`].derived) S.cache[`${tgtSec}_${tgtRow}`].derived = {};
+  S.cache[`${tgtSec}_${tgtRow}`].values[tgtFid] = mean;
+  S.cache[`${tgtSec}_${tgtRow}`].derived[tgtFid] = "mean_riproducibilita";
+  const input = document.querySelector(
+    `[data-sec="${tgtSec}"][data-row="${tgtRow}"][data-fid="${tgtFid}"]`
+  );
+  if (input) {
     input.value = mean.toFixed(2);
-
-    // evidenza visiva campo auto-compilato
+    input.readOnly = true;
     input.classList.add("autofilled");
-    input.title =
-  "Valore derivato dalla media delle misure di riproducibilità\n" +
-  input.title;
-
-    // highlight temporaneo
-    input.style.transition = "background .35s";
-    input.style.background = "rgba(77,159,255,.18)";
-
-    setTimeout(()=>{
-      input.style.background = "";
-    },700);
-
-  });
-
-  refreshCard(TGT_SEC, TGT_ROW);
-
+    input.title = `Media delle misure di riproducibilita (${srcSec})\nValore: ${mean.toFixed(2)} — calcolato automaticamente`;
+    // Flash outline senza toccare background (lo gestisce la classe CSS)
+    input.style.outline = "2px solid var(--accent)";
+    setTimeout(() => { input.style.outline = ""; }, 500);
+  }
+  refreshCard(tgtSec, tgtRow);
 }
 
-function countCardLinks(secId,rowId){
+function propagateCrossRules() {
 
-  if(secId === "stato_riprod" && ["st_r1","st_r2","st_r3"].includes(rowId)){
-    return PROPAGATED_FIELDS.length;
+  // ── STATO: riprod → linearità mAs 100 ──────────────────────────────
+  if (S.controlType === 'stato') {
+    const SRC_SEC  = "stato_riprod";
+    const SRC_ROWS = ["st_r1","st_r2","st_r3"];
+    const TGT_SEC  = "stato_lin_mas";
+    const TGT_ROW  = "mas_100";
+    const tgtKey   = `${TGT_SEC}_${TGT_ROW}`;
+
+    ensureCache(TGT_SEC, TGT_ROW);
+
+    PROPAGATED_FIELDS.forEach(fid => {
+      const values = SRC_ROWS
+        .map(r => { const raw = S.cache?.[`${SRC_SEC}_${r}`]?.values?.[fid]; return (raw !== undefined && raw !== "" && !isNaN(raw)) ? parseFloat(raw) : null; })
+        .filter(v => v !== null);
+      if (values.length !== SRC_ROWS.length) return;
+      const mean = Math.round(values.reduce((a,b)=>a+b,0) / values.length * 100) / 100;
+      if (!S.cache[tgtKey].values)  S.cache[tgtKey].values  = {};
+      if (!S.cache[tgtKey].derived) S.cache[tgtKey].derived = {};
+      S.cache[tgtKey].values[fid]  = mean;
+      S.cache[tgtKey].derived[fid] = "mean_riproducibilita";
+      const input = document.querySelector(`[data-sec="${TGT_SEC}"][data-row="${TGT_ROW}"][data-fid="${fid}"]`);
+      if (!input) return;
+      input.value = mean.toFixed(2);
+      input.readOnly = true;
+      input.classList.add("autofilled");
+      input.title = `Media delle misure di riproducibilita (stato_riprod)\nValore: ${mean.toFixed(2)} — calcolato automaticamente`;
+      input.style.outline = "2px solid var(--accent)";
+      setTimeout(() => { input.style.outline = ""; }, 500);
+    });
+
+    refreshCard(TGT_SEC, TGT_ROW);
   }
 
+  // ── COSTANZA: riprod_ctdi (dose_air) → var_kv (vkv_120, ctdi100) ───
+  if (S.controlType === 'costanza') {
+    _propagateMean(
+      'riprod_ctdi', ['rip_1','rip_2','rip_3'], 'dose_air',
+      'var_kv', 'vkv_120', 'ctdi100'
+    );
+  }
+}
+
+function countCardLinks(secId, rowId) {
+  if (secId === "stato_riprod" && ["st_r1","st_r2","st_r3"].includes(rowId))
+    return PROPAGATED_FIELDS.length;
+  if (secId === "riprod_ctdi" && ["rip_1","rip_2","rip_3"].includes(rowId))
+    return 1; // dose_air → var_kv.ctdi100
   return 0;
 }
 
@@ -2628,340 +2656,650 @@ async function seedDemoData() {
 // SVG CHARTS – Grafici ispirati a Excel nel report
 // ═══════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════
+// ANALISI STATISTICA AVANZATA
+// ═══════════════════════════════════════════════════════════════════════
+
+function linearR2(xs, ys) {
+  const n=xs.length; if(n<2) return 0;
+  const mx=xs.reduce((a,b)=>a+b,0)/n, my=ys.reduce((a,b)=>a+b,0)/n;
+  const ssxy=xs.reduce((s,x,i)=>s+(x-mx)*(ys[i]-my),0);
+  const ssxx=xs.reduce((s,x)=>s+(x-mx)**2,0);
+  const ssyy=ys.reduce((s,y)=>s+(y-my)**2,0);
+  if(ssxx===0||ssyy===0) return 1;
+  return (ssxy**2)/(ssxx*ssyy);
+}
+
+function quadraticFit(xs, ys) {
+  const n=xs.length; if(n<3) return null;
+  const sx=xs.reduce((a,b)=>a+b,0), sx2=xs.reduce((a,b)=>a+b**2,0);
+  const sx3=xs.reduce((a,b)=>a+b**3,0), sx4=xs.reduce((a,b)=>a+b**4,0);
+  const sy=ys.reduce((a,b)=>a+b,0);
+  const sxy=xs.reduce((s,x,i)=>s+x*ys[i],0);
+  const sx2y=xs.reduce((s,x,i)=>s+x**2*ys[i],0);
+  const A=[[n,sx,sx2,sy],[sx,sx2,sx3,sxy],[sx2,sx3,sx4,sx2y]];
+  for(let c=0;c<3;c++){
+    let maxr=c; for(let r=c+1;r<3;r++) if(Math.abs(A[r][c])>Math.abs(A[maxr][c])) maxr=r;
+    [A[c],A[maxr]]=[A[maxr],A[c]];
+    for(let r=c+1;r<3;r++){const f=A[r][c]/A[c][c]; for(let k=c;k<=3;k++) A[r][k]-=f*A[c][k];}
+  }
+  const cc=new Array(3);
+  for(let r=2;r>=0;r--){cc[r]=A[r][3]; for(let k=r+1;k<3;k++) cc[r]-=A[r][k]*cc[k]; cc[r]/=A[r][r];}
+  const [c0,c1,c2]=[cc[0],cc[1],cc[2]];
+  const yhat=xs.map(x=>c0+c1*x+c2*x**2);
+  const my=ys.reduce((a,b)=>a+b,0)/n;
+  const sst=ys.reduce((s,y)=>s+(y-my)**2,0);
+  const ssr=yhat.reduce((s,y,i)=>s+(y-ys[i])**2,0);
+  return {a:c0,b:c1,c:c2,r2:sst>0?1-ssr/sst:1};
+}
+
+function coefficientOfVariation(vals) {
+  const v=vals.filter(x=>x!=null&&!isNaN(x));
+  if(v.length<2) return null;
+  const m=v.reduce((a,b)=>a+b,0)/v.length;
+  if(m===0) return null;
+  const sd=Math.sqrt(v.reduce((s,x)=>s+(x-m)**2,0)/(v.length-1));
+  return sd/m*100;
+}
+
+function r2Badge(r2, label) {
+  if(r2==null||isNaN(r2)) return '';
+  const cls=r2>=0.999?'ok':r2>=0.99?'warn':'fail';
+  return `<span class="anal-badge b-${cls}">${label||'R²'} = ${r2.toFixed(4)}</span>`;
+}
+
+function cvBadge(cv) {
+  if(cv==null||isNaN(cv)) return '';
+  const cls=cv<=1?'ok':cv<=3?'warn':'fail';
+  return `<span class="anal-badge b-${cls}">CV% = ${cv.toFixed(2)}%</span>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SVG CHART ENGINE  –  scala sempre corretta, punti dentro il frame
+// ═══════════════════════════════════════════════════════════════════════
+
 /**
- * Costruisce un grafico SVG generico.
- * @param {object} cfg - { title, type:'line'|'bar', labels, datasets, yLabel, width, height }
- * @returns {string} HTML del .rpt-chart-box
+ * Calcola range Y con margine garantito e tick "nice".
+ * Tutti i valori (misure + refLine + soglie) vengono inclusi prima
+ * di calcolare il margine, così nessun punto può uscire dal frame.
  */
-function buildSvgChart(cfg) {
-  const W = cfg.width  || 340;
-  const H = cfg.height || 180;
-  const PAD = { top: 18, right: 16, bottom: 38, left: 46 };
-  const cW = W - PAD.left - PAD.right;
-  const cH = H - PAD.top  - PAD.bottom;
-
-  // raccolta tutti i valori per scala Y
-  const allVals = cfg.datasets.flatMap(d => d.data.filter(v => v != null && !isNaN(v)));
-  if (!allVals.length) return '';
-  let yMin = Math.min(...allVals);
-  let yMax = Math.max(...allVals);
-  const yPad = (yMax - yMin) * 0.15 || 1;
-  yMin = Math.floor(yMin - yPad);
-  yMax = Math.ceil(yMax  + yPad);
-  const yRange = yMax - yMin;
-
-  const xCount = cfg.labels.length;
-  const xStep  = cW / Math.max(xCount - 1, 1);
-  const barW   = cW / xCount * 0.6;
-
-  const toX = i  => PAD.left + (cfg.type === 'bar' ? (i + 0.5) * cW / xCount : i * xStep);
-  const toY = v  => PAD.top  + cH * (1 - (v - yMin) / yRange);
-
-  // Grid lines & Y labels
-  const gridLines = 4;
-  let grid = '';
-  for (let g = 0; g <= gridLines; g++) {
-    const vy  = yMin + yRange * g / gridLines;
-    const cy  = toY(vy);
-    const lbl = Number.isInteger(vy) ? vy : vy.toFixed(1);
-    grid += `<line x1="${PAD.left}" y1="${cy}" x2="${PAD.left+cW}" y2="${cy}"
-               stroke="#2e3547" stroke-width="1" stroke-dasharray="${g===0?'none':'3,3'}"/>
-             <text x="${PAD.left-5}" y="${cy+4}" text-anchor="end" fill="#7a86a0"
-               font-size="9" font-family="'Cascadia Code','Consolas',monospace">${lbl}</text>`;
+function niceAxisRange(rawVals, nTicks=5) {
+  const vals = rawVals.filter(v => v!=null && !isNaN(v));
+  if(!vals.length) return {min:0, max:1, ticks:[0,0.5,1]};
+  const dMin = Math.min(...vals);
+  const dMax = Math.max(...vals);
+  const span = (dMax-dMin) || Math.abs(dMax)*0.2 || 1;
+  // margine 18% sopra e sotto i dati REALI
+  const lo = dMin - span*0.18;
+  const hi = dMax + span*0.18;
+  // nice step
+  const raw = (hi-lo)/(nTicks-1);
+  const mag = Math.pow(10, Math.floor(Math.log10(raw||1)));
+  const step = [1,2,2.5,5,10].map(f=>f*mag).find(f=>f>=raw) || raw;
+  const start = Math.floor(lo/step)*step;
+  const ticks = [];
+  for(let i=0; i<=nTicks+3; i++){
+    const v = parseFloat((start+i*step).toPrecision(8));
+    if(v >= lo-step*0.01 && v <= hi+step*0.01) ticks.push(v);
   }
-
-  // X labels
-  let xLabels = '';
-  cfg.labels.forEach((lbl, i) => {
-    xLabels += `<text x="${toX(i)}" y="${PAD.top+cH+14}" text-anchor="middle"
-      fill="#7a86a0" font-size="9" font-family="'Cascadia Code','Consolas',monospace">${lbl}</text>`;
-  });
-
-  // Y axis label
-  const yAxisLabel = cfg.yLabel
-    ? `<text x="9" y="${PAD.top + cH/2}" text-anchor="middle"
-         fill="#7a86a0" font-size="9" font-family="sans-serif"
-         transform="rotate(-90,9,${PAD.top + cH/2})">${cfg.yLabel}</text>`
-    : '';
-
-  // Axes
-  const axes = `
-    <line x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top+cH}" stroke="#2e3547" stroke-width="1.5"/>
-    <line x1="${PAD.left}" y1="${PAD.top+cH}" x2="${PAD.left+cW}" y2="${PAD.top+cH}" stroke="#2e3547" stroke-width="1.5"/>`;
-
-  // Color palette (Excel-like)
-  const PALETTE = ['#4d9fff','#34c264','#f0a500','#f04f4f','#a78bfa','#38bdf8'];
-
-  // Dataset paths / bars
-  let series = '';
-  let legendItems = '';
-
-  cfg.datasets.forEach((ds, di) => {
-    const col = ds.color || PALETTE[di % PALETTE.length];
-
-    if (cfg.type === 'bar') {
-      const offset = di * barW - (cfg.datasets.length - 1) * barW / 2;
-      ds.data.forEach((v, i) => {
-        if (v == null || isNaN(v)) return;
-        const bx = toX(i) + offset - barW / 2;
-        const by = toY(v);
-        const bh = (PAD.top + cH) - by;
-        series += `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}"
-                     fill="${col}" opacity="0.85" rx="1"/>
-                   <title>${cfg.labels[i]}: ${v}</title>`;
-      });
-    } else {
-      // Line + markers
-      const pts = ds.data.map((v, i) => v != null && !isNaN(v) ? `${toX(i).toFixed(1)},${toY(v).toFixed(1)}` : null).filter(Boolean);
-      if (pts.length > 1)
-        series += `<polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round"/>`;
-      ds.data.forEach((v, i) => {
-        if (v == null || isNaN(v)) return;
-        series += `<circle cx="${toX(i).toFixed(1)}" cy="${toY(v).toFixed(1)}" r="3.5" fill="${col}" stroke="#0f1117" stroke-width="1"/>`;
-      });
-    }
-
-    if (cfg.datasets.length > 1) {
-      const lx = PAD.left + di * 90;
-      legendItems += `<rect x="${lx}" y="${H-8}" width="10" height="6" fill="${col}" rx="1"/>
-                      <text x="${lx+13}" y="${H-3}" fill="#7a86a0" font-size="8"
-                        font-family="'Cascadia Code','Consolas',monospace">${ds.label||'Serie '+(di+1)}</text>`;
-    }
-  });
-
-  // Warn / fail bands (optional)
-  let bands = '';
-  if (cfg.warnLine != null) {
-    const cy = toY(cfg.warnLine);
-    bands += `<line x1="${PAD.left}" y1="${cy}" x2="${PAD.left+cW}" y2="${cy}"
-               stroke="#f0a500" stroke-width="1" stroke-dasharray="4,2" opacity="0.7"/>`;
-  }
-  if (cfg.failLine != null) {
-    const cy = toY(cfg.failLine);
-    bands += `<line x1="${PAD.left}" y1="${cy}" x2="${PAD.left+cW}" y2="${cy}"
-               stroke="#f04f4f" stroke-width="1" stroke-dasharray="4,2" opacity="0.7"/>`;
-  }
-  if (cfg.refLine != null && cfg.refLine >= yMin && cfg.refLine <= yMax) {
-    const cy = toY(cfg.refLine);
-    bands += `<line x1="${PAD.left}" y1="${cy}" x2="${PAD.left+cW}" y2="${cy}"
-               stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="5,3" opacity="0.8"/>
-             <text x="${PAD.left+cW+3}" y="${cy+4}" fill="#a78bfa" font-size="8">⌀</text>`;
-  }
-
-  const svgStr = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-    ${yAxisLabel}${grid}${bands}${axes}${series}${xLabels}${legendItems}
-  </svg>`;
-
-  return `<div class="rpt-chart-box">
-    <div class="rpt-chart-title">📊 ${cfg.title}</div>
-    ${svgStr}
-  </div>`;
+  if(ticks.length<2){ticks.unshift(lo); ticks.push(hi);}
+  return {min:ticks[0], max:ticks[ticks.length-1], ticks};
 }
 
 /**
- * Genera e inietta i grafici SVG nel div #rpt-charts-container
- * in base al tipo di controllo corrente e ai dati in S.cache
+ * buildSvgChart  –  unica funzione grafica
+ *
+ * cfg: {
+ *   title:string, type:'line'|'bar',
+ *   labels:string[], yLabel?:string,
+ *   datasets:[{label, data:number[], color?, dashed?}],
+ *   refLine?:number,          // linea media tratteggiata (viola)
+ *   warnThresh?:number,       // soglia warn (arancio)
+ *   failThresh?:number,       // soglia fail (rosso)
+ *   width?:number, height?:number
+ * }
  */
-function renderReportCharts() {
-  const container = document.getElementById('rpt-charts-container');
-  if (!container || !S.control) return;
+function buildSvgChart(cfg) {
+  const W = cfg.width  || 400;
+  const H = cfg.height || 200;
+  const P = {t:24, r:20, b:46, l:54};
+  const cW = W-P.l-P.r, cH = H-P.t-P.b;
 
-  const charts = [];
-  const cache  = S.cache;
+  // Raccoglie TUTTI i valori (dati + linee di riferimento) per la scala
+  const allForScale = [
+    ...cfg.datasets.flatMap(d=>d.data.filter(v=>v!=null&&!isNaN(v))),
+    ...(cfg.refLine!=null   ? [cfg.refLine]   : []),
+    ...(cfg.warnThresh!=null? [cfg.warnThresh] : []),
+    ...(cfg.failThresh!=null? [cfg.failThresh] : []),
+  ];
+  if(!allForScale.length) return '';
 
-  // Helper: leggi un valore dalla cache
-  const val = (secId, rowId, fid) => {
-    const v = parseFloat(cache[`${secId}_${rowId}`]?.values?.[fid]);
-    return isNaN(v) ? null : v;
+  const {min:yMin, max:yMax, ticks:yTicks} = niceAxisRange(allForScale, 5);
+  const yRange = yMax - yMin;
+
+  const n = cfg.labels.length;
+  // toX: calcola la posizione X di un punto; per bar usa slot centrati
+  const toX = i => cfg.type==='bar'
+    ? P.l + (i+0.5)*cW/n
+    : P.l + (n<=1 ? cW/2 : i*cW/(n-1));
+  // toY: clamp incluso per sicurezza (non dovrebbe servire con scala corretta)
+  const toY = v => {
+    const raw = P.t + cH*(1-(v-yMin)/yRange);
+    return Math.max(P.t, Math.min(P.t+cH, raw));
   };
 
-  if (S.controlType === 'accettazione') {
-    // 1) Dose in Aria vs kV (assiale – prime 6 righe)
-    const aKv   = [120, 120, 120, 80, 100, 140];
-    const aExp  = ['r1','r2','r3','r4','r5','r6'].map((id,i) => ({
-      kv: aKv[i], v: val('dose_aria_ass', id, 'ct_exp')
-    })).filter(r => r.v !== null);
-    // raggruppa per kV univoco
-    const kvU   = [...new Set(aExp.map(r=>r.kv))].sort((a,b)=>a-b);
-    if (kvU.length >= 3) {
-      charts.push(buildSvgChart({
-        title: 'Dose in Aria vs kVp (assiale)',
-        type: 'line',
-        labels: kvU.map(String),
-        datasets: [{
-          label: 'CT Exposure (mGy·cm)',
-          data: kvU.map(kv => {
-            const matches = aExp.filter(r => r.kv === kv);
-            return matches.length ? +(matches.reduce((s,r)=>s+r.v,0)/matches.length).toFixed(2) : null;
-          }),
-          color: '#4d9fff',
-        }],
-        yLabel: 'mGy·cm',
-      }));
-    }
+  let svg = '';
 
-    // 2) CTDIvol fantoccio HEAD centro vs kV
-    const kvList4 = [80, 100, 120, 140];
-    const headData = kvList4.map(kv => val('df_head_ass', `${kv}_centro`, 'ctdi_vol'));
-    if (headData.some(v => v !== null)) {
-      charts.push(buildSvgChart({
-        title: 'CTDIvol HEAD centro vs kVp',
-        type: 'line',
-        labels: kvList4.map(String),
-        datasets: [{
-          label: 'CTDIvol mis. (mGy)',
-          data: headData,
-          color: '#34c264',
-        }, {
-          label: 'CTDIvol TC display',
-          data: kvList4.map(kv => val('df_head_ass', `${kv}_centro`, 'ctdi_vol_tc')),
-          color: '#f0a500',
-        }],
-        yLabel: 'mGy',
-      }));
-    }
+  // ── Grid lines + Y labels
+  yTicks.forEach(v => {
+    const cy = toY(v);
+    const lbl = Math.abs(v)>=100 ? v.toFixed(0)
+              : Math.abs(v)>=10  ? v.toFixed(1)
+              : v.toFixed(2);
+    svg += `<line x1="${P.l}" y1="${cy.toFixed(1)}" x2="${P.l+cW}" y2="${cy.toFixed(1)}"
+      stroke="var(--border)" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="${(P.l-5).toFixed(0)}" y="${(cy+3.5).toFixed(1)}" text-anchor="end"
+      fill="var(--muted)" font-size="9" font-family="'Cascadia Code',monospace">${lbl}</text>`;
+  });
 
-    // 3) Rumore iterativi vs livello %
-    const iterLvl = [0,10,20,30,40,50,60,70,80,90,100];
-    const rumore1 = iterLvl.map(l => val('ric_iter_1', `ri1_${l}`, 'rumore'));
-    if (rumore1.some(v => v !== null)) {
-      charts.push(buildSvgChart({
-        title: 'Rumore (HU) vs Livello Iterazione %',
-        type: 'line',
-        labels: iterLvl.map(String),
-        datasets: [{ label: 'Rumore HU', data: rumore1, color: '#a78bfa' }],
-        yLabel: 'HU',
-      }));
-    }
+  // ── Assi
+  svg += `<line x1="${P.l}" y1="${P.t}" x2="${P.l}" y2="${P.t+cH}"
+    stroke="var(--border)" stroke-width="1.5"/>
+  <line x1="${P.l}" y1="${P.t+cH}" x2="${P.l+cW}" y2="${P.t+cH}"
+    stroke="var(--border)" stroke-width="1.5"/>`;
 
-    // 4) CTDIvol HEAD – 5 posizioni @ 120 kV (barre)
-    const pos5ids = ['centro','ore_3','ore_6','ore_9','ore_12'];
-    const posLabels = ['C','3h','6h','9h','12h'];
-    const posMis = pos5ids.map(p => val('df_head_ass', `120_${p}`, 'ctdi_vol'));
-    const posTc  = pos5ids.map(p => val('df_head_ass', `120_${p}`, 'ctdi_vol_tc'));
-    if (posMis.some(v => v !== null)) {
-      charts.push(buildSvgChart({
-        title: 'CTDIvol HEAD 120 kV – 5 posizioni',
-        type: 'bar',
-        labels: posLabels,
-        datasets: [
-          { label: 'Misurato', data: posMis, color: '#4d9fff' },
-          { label: 'TC display', data: posTc,  color: '#38bdf8' },
-        ],
-        yLabel: 'mGy',
-      }));
-    }
+  // ── Etichetta asse Y
+  if(cfg.yLabel)
+    svg += `<text x="12" y="${P.t+cH/2}" text-anchor="middle"
+      fill="var(--muted)" font-size="9" transform="rotate(-90,12,${P.t+cH/2})">${cfg.yLabel}</text>`;
+
+  // ── Etichette asse X
+  cfg.labels.forEach((lbl,i) =>
+    svg += `<text x="${toX(i).toFixed(1)}" y="${(P.t+cH+14).toFixed(1)}"
+      text-anchor="middle" fill="var(--muted)" font-size="9"
+      font-family="'Cascadia Code',monospace">${lbl}</text>`
+  );
+
+  // ── Bande e linee soglia
+  if(cfg.warnThresh!=null && cfg.failThresh!=null){
+    const wy=toY(cfg.warnThresh), fy=toY(cfg.failThresh);
+    svg += `<rect x="${P.l}" y="${fy.toFixed(1)}" width="${cW}"
+      height="${(wy-fy).toFixed(1)}" fill="var(--warn)" opacity=".07"/>
+    <rect x="${P.l}" y="${P.t}" width="${cW}"
+      height="${(fy-P.t).toFixed(1)}" fill="var(--fail)" opacity=".07"/>
+    <line x1="${P.l}" y1="${wy.toFixed(1)}" x2="${P.l+cW}" y2="${wy.toFixed(1)}"
+      stroke="var(--warn)" stroke-width="1" stroke-dasharray="4,2" opacity=".8"/>
+    <line x1="${P.l}" y1="${fy.toFixed(1)}" x2="${P.l+cW}" y2="${fy.toFixed(1)}"
+      stroke="var(--fail)" stroke-width="1" stroke-dasharray="4,2" opacity=".8"/>`;
+  } else if(cfg.warnThresh!=null){
+    const wy=toY(cfg.warnThresh);
+    svg += `<line x1="${P.l}" y1="${wy.toFixed(1)}" x2="${P.l+cW}" y2="${wy.toFixed(1)}"
+      stroke="var(--warn)" stroke-width="1" stroke-dasharray="4,2" opacity=".8"/>`;
   }
 
-  if (S.controlType === 'costanza') {
-    // 1) Riproducibilità CTDI – barre 3 misure
-    const rip = [1,2,3].map(n => val('riprod_ctdi', `rip_${n}`, 'dose_air'));
-    if (rip.some(v => v !== null)) {
-      const validRip = rip.filter(v => v !== null);
-      const mediaRip = validRip.reduce((s,v)=>s+v,0) / validRip.length;
-      charts.push(buildSvgChart({
-        title: 'Riproducibilità CTDI – 3 misure',
-        type: 'bar',
-        labels: ['Mis.1','Mis.2','Mis.3'],
-        datasets: [{ label: 'Dose free air (mGy·cm)', data: rip, color: '#4d9fff' }],
-        yLabel: 'mGy·cm',
-        refLine: +mediaRip.toFixed(2),
-      }));
-    }
-
-    // 2) CTDI100 vs kV (costanza)
-    const kvs = [80,100,120,140];
-    const c100 = kvs.map(kv => val('var_kv', `vkv_${kv}`, 'ctdi100'));
-    const cph  = kvs.map(kv => val('var_kv', `vkv_${kv}`, 'ctdi100_ph'));
-    if (c100.some(v => v !== null)) {
-      charts.push(buildSvgChart({
-        title: 'CTDI₁₀₀ vs kVp (Costanza)',
-        type: 'line',
-        labels: kvs.map(String),
-        datasets: [
-          { label: 'Aria', data: c100, color: '#4d9fff' },
-          { label: 'Fantoccio (pH)', data: cph, color: '#34c264' },
-        ],
-        yLabel: 'mGy',
-      }));
-    }
+  // ── Linea di riferimento (media)
+  if(cfg.refLine!=null){
+    const ry=toY(cfg.refLine);
+    svg += `<line x1="${P.l}" y1="${ry.toFixed(1)}" x2="${P.l+cW}" y2="${ry.toFixed(1)}"
+      stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5,3" opacity=".8"/>
+    <text x="${(P.l+cW+3).toFixed(0)}" y="${(ry+4).toFixed(1)}"
+      fill="var(--accent)" font-size="8">⌀</text>`;
   }
 
-  if (S.controlType === 'stato') {
-    // 0) Riproducibilità 3 misure iniziali (120 kVp)
-    const ripVol = [1,2,3].map(n => val('stato_riprod', `st_r${n}`, 'ctdi_vol'));
-    const ripTc  = [1,2,3].map(n => val('stato_riprod', `st_r${n}`, 'ctdi_vol_tc'));
-    if (ripVol.some(v => v !== null)) {
-      const media = ripVol.filter(v=>v!==null).reduce((s,v)=>s+v,0) / ripVol.filter(v=>v!==null).length;
-      charts.push(buildSvgChart({
-        title: 'Riproducibilità – 3 mis. 120 kVp',
-        type: 'bar',
-        labels: ['Mis.1','Mis.2','Mis.3'],
-        datasets: [
-          { label: 'CTDIvol mis. (mGy)', data: ripVol, color: '#4d9fff' },
-          { label: 'CTDIvol TC (mGy)',   data: ripTc,  color: '#f0a500' },
-        ],
-        yLabel: 'mGy',
-        refLine: +media.toFixed(2),
-      }));
-    }
-    const masLbls = ['50','100','200','300'];
-    const masIds  = ['mas_50','mas_100','mas_200','mas_300'];
-    const masVol  = masIds.map(id => val('stato_lin_mas', id, 'ctdi_vol'));
-    if (masVol.some(v => v !== null)) {
-      charts.push(buildSvgChart({
-        title: 'CTDIvol vs mAs (Linearità)',
-        type: 'line',
-        labels: masLbls,
-        datasets: [
-          { label: 'CTDIvol mis.', data: masVol, color: '#4d9fff' },
-          { label: 'CTDIvol TC', data: masIds.map(id => val('stato_lin_mas', id, 'ctdi_vol_tc')), color: '#f0a500' },
-        ],
-        yLabel: 'mGy',
-      }));
+  // ── Dataset
+  const PALETTE=['#4d9fff','#34c264','#f0a500','#f04f4f','#a78bfa','#38bdf8'];
+  const nDs = cfg.datasets.length;
+  const barSlotW = cW/n;
+  const barW = Math.min(barSlotW*0.65/Math.max(nDs,1), 30);
+
+  let legendItems = '';
+  cfg.datasets.forEach((ds,di)=>{
+    const col = ds.color || PALETTE[di%PALETTE.length];
+    const dashAttr = ds.dashed ? 'stroke-dasharray="5,3"' : '';
+
+    if(cfg.type==='bar'){
+      const offset = (di-(nDs-1)/2)*barW;
+      const yBase  = toY(Math.max(yMin, 0));
+      ds.data.forEach((v,i)=>{
+        if(v==null||isNaN(v)) return;
+        const bx = toX(i)+offset-barW/2;
+        const by = toY(v);
+        const bh = Math.abs(yBase-by);
+        if(bh<0.5) return;
+        // colore individuale se passato come array
+        const bc = Array.isArray(ds.colors) ? (ds.colors[i]||col) : col;
+        svg += `<rect x="${bx.toFixed(1)}" y="${Math.min(by,yBase).toFixed(1)}"
+          width="${barW.toFixed(1)}" height="${bh.toFixed(1)}"
+          fill="${bc}" opacity=".85" rx="1"/>`;
+        // valore sopra la barra (solo se c'è spazio)
+        if(toY(v)-P.t > 12)
+          svg += `<text x="${(bx+barW/2).toFixed(1)}" y="${(Math.min(by,yBase)-3).toFixed(1)}"
+            text-anchor="middle" fill="${bc}" font-size="8">${v.toFixed(2)}</text>`;
+      });
+    } else {
+      // Linea
+      const pts = ds.data
+        .map((v,i) => v!=null&&!isNaN(v) ? `${toX(i).toFixed(1)},${toY(v).toFixed(1)}` : null)
+        .filter(Boolean);
+      if(pts.length>1)
+        svg += `<polyline points="${pts.join(' ')}" fill="none" stroke="${col}"
+          stroke-width="${ds.dashed?1.5:2}" stroke-linejoin="round" ${dashAttr}/>`;
+      ds.data.forEach((v,i)=>{
+        if(v==null||isNaN(v)) return;
+        const cx=toX(i).toFixed(1), cy=toY(v).toFixed(1);
+        svg += `<circle cx="${cx}" cy="${cy}" r="${ds.dashed?2.5:4}"
+          fill="${col}" stroke="var(--bg2)" stroke-width="1.5"/>`;
+        // etichetta valore: solo serie primarie (non fit/dashed), solo se spazio
+        if(!ds.dashed && toY(v)-P.t>14)
+          svg += `<text x="${cx}" y="${(toY(v)-7).toFixed(1)}"
+            text-anchor="middle" fill="${col}" font-size="8">${v.toFixed(2)}</text>`;
+      });
     }
 
-    // 2) CTDIvol vs kV (Stato)
-    const kvs4 = [80,100,120,140];
-    const statVol = kvs4.map(kv => val('stato_var_kv', `kv_${kv}`, 'ctdi_vol'));
-    if (statVol.some(v => v !== null)) {
-      charts.push(buildSvgChart({
-        title: 'CTDIvol vs kVp (Stato annuale)',
-        type: 'line',
-        labels: kvs4.map(String),
-        datasets: [
-          { label: 'CTDIvol mis.',   data: statVol, color: '#34c264' },
-          { label: 'CTDIvol TC',     data: kvs4.map(kv => val('stato_var_kv', `kv_${kv}`, 'ctdi_vol_tc')), color: '#f04f4f' },
-        ],
-        yLabel: 'mGy',
-      }));
+    // Legenda
+    if(nDs>1){
+      const lx = P.l + di*Math.min(110, cW/nDs);
+      const ly = H-7;
+      legendItems += `<rect x="${lx}" y="${ly}" width="10" height="5" fill="${col}" rx="1"/>
+        <text x="${lx+13}" y="${ly+5}" fill="var(--muted)" font-size="8"
+          font-family="'Cascadia Code',monospace">${ds.label}</text>`;
     }
+  });
 
-    // 3) BODY vs HEAD @ stessa kV (barre)
-    const bodyVol = kvs4.map(kv => val('stato_body', `body_kv${kv}`, 'ctdi_vol'));
-    if (bodyVol.some(v => v !== null)) {
-      charts.push(buildSvgChart({
-        title: 'CTDIvol HEAD vs BODY per kVp',
-        type: 'bar',
-        labels: kvs4.map(String),
-        datasets: [
-          { label: 'HEAD', data: statVol, color: '#4d9fff' },
-          { label: 'BODY', data: bodyVol, color: '#38bdf8' },
-        ],
-        yLabel: 'mGy',
-      }));
+  svg += legendItems;
+
+  return `<div class="rpt-chart-box">
+    <div class="rpt-chart-title">📊 ${cfg.title}</div>
+    <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"
+      style="display:block;width:100%;overflow:visible">${svg}</svg>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// HELPERS  –  lettura cache e badge Δ%
+// ═══════════════════════════════════════════════════════════════════════
+
+function _cv(secId, rowId, fid) {
+  const v = parseFloat(S.cache[`${secId}_${rowId}`]?.values?.[fid]);
+  return isNaN(v) ? null : v;
+}
+
+function _deltaPct(a, b) {
+  if(a==null||b==null||b===0) return null;
+  return Math.abs((a-b)/b*100);
+}
+
+function _deltaBadge(a, b) {
+  const d=_deltaPct(a,b); if(d==null) return '';
+  const cls=d>S.settings.threshold_fail?'fail':d>S.settings.threshold_warn?'warn':'ok';
+  return `<span class="anal-badge b-${cls}">Δ%=${d.toFixed(2)}%</span>`;
+}
+
+function _deltaColor(d) {
+  if(d==null) return '#888';
+  return d>S.settings.threshold_fail?'#f04f4f':d>S.settings.threshold_warn?'#f0a500':'#34c264';
+}
+
+function _deltaCell(d) {
+  if(d==null) return '<td>–</td>';
+  const cls=d>S.settings.threshold_fail?'fail':d>S.settings.threshold_warn?'warn':'ok';
+  return `<td class="b-${cls}" style="font-weight:700">${d.toFixed(2)}%</td>`;
+}
+
+// Tabella riepilogo Δ% generica
+function _deltaTable(rows) {
+  // rows: [{label, v, tc}]
+  const trs = rows.filter(r=>r.v!=null||r.tc!=null).map(r=>{
+    const d=_deltaPct(r.v,r.tc);
+    return `<tr><td>${r.label}</td><td>${r.v?.toFixed(2)??'–'}</td>
+      <td>${r.tc?.toFixed(2)??'–'}</td>${_deltaCell(d)}</tr>`;
+  }).join('');
+  return `<table class="rpt-ctable"><thead>
+    <tr><th>Parametro</th><th>Mis. (mGy)</th><th>TC (mGy)</th><th>Δ%</th></tr>
+    </thead><tbody>${trs}</tbody></table>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// TAB GRAFICI – una funzione per tab, ID sezione/riga espliciti
+// ═══════════════════════════════════════════════════════════════════════
+
+// ── TAB: Riproducibilità ───────────────────────────────────────────────
+function tabRpt_Riproducibilita() {
+  if(S.controlType==='stato'){
+    const ids=['st_r1','st_r2','st_r3'];
+    const vals=ids.map(id=>_cv('stato_riprod',id,'ctdi_vol'));
+    const tc  =ids.map(id=>_cv('stato_riprod',id,'ctdi_vol_tc'));
+    const pres=vals.filter(v=>v!=null); if(!pres.length) return '';
+    const mean=pres.reduce((a,b)=>a+b,0)/pres.length;
+    const cv=coefficientOfVariation(pres);
+    const chart=buildSvgChart({
+      title:'Riproducibilità CTDIvol – 120 kVp (3 mis.)',
+      type:'bar', labels:['Mis.1','Mis.2','Mis.3'],
+      datasets:[
+        {label:'CTDIvol mis. (mGy)', data:vals, color:'#4d9fff'},
+        {label:'CTDIvol TC (mGy)',   data:tc,   color:'#f0a500'},
+      ],
+      yLabel:'mGy', refLine:+mean.toFixed(3),
+    });
+    const bdg=`<div style="margin-bottom:8px">${cvBadge(cv)}${_deltaBadge(vals[0],tc[0])}</div>`;
+    return bdg+chart;
+  }
+  if(S.controlType==='costanza'){
+    const ids=['rip_1','rip_2','rip_3'];
+    const vals=ids.map(id=>_cv('riprod_ctdi',id,'dose_air'));
+    const pres=vals.filter(v=>v!=null); if(!pres.length) return '';
+    const mean=pres.reduce((a,b)=>a+b,0)/pres.length;
+    const cv=coefficientOfVariation(pres);
+    const chart=buildSvgChart({
+      title:'Riproducibilità Dose free air – 120 kVp',
+      type:'bar', labels:['Mis.1','Mis.2','Mis.3'],
+      datasets:[{label:'Dose free air (mGy·cm)', data:vals, color:'#4d9fff'}],
+      yLabel:'mGy·cm', refLine:+mean.toFixed(3),
+    });
+    return `<div style="margin-bottom:8px">${cvBadge(cv)}</div>`+chart;
+  }
+  return '';
+}
+
+// ── TAB: Linearità mAs ────────────────────────────────────────────────
+function tabRpt_LinearitaMas() {
+  if(S.controlType!=='stato') return '';
+  const rows=[{id:'mas_50',mas:50},{id:'mas_100',mas:100},
+              {id:'mas_200',mas:200},{id:'mas_300',mas:300}];
+  const pts=rows.map(r=>({
+    mas:r.mas, v:_cv('stato_lin_mas',r.id,'ctdi_vol'),
+    tc:_cv('stato_lin_mas',r.id,'ctdi_vol_tc'),
+  })).filter(p=>p.v!=null).sort((a,b)=>a.mas-b.mas);
+  if(pts.length<2) return '';
+
+  const xs=pts.map(p=>p.mas), ys=pts.map(p=>p.v);
+  const r2=linearR2(xs,ys);
+  // fit lineare
+  const xm=xs.reduce((a,b)=>a+b,0)/xs.length;
+  const ym=ys.reduce((a,b)=>a+b,0)/ys.length;
+  let sxy=0,sxx=0; xs.forEach((x,i)=>{sxy+=(x-xm)*(ys[i]-ym);sxx+=(x-xm)**2;});
+  const slope=sxx?sxy/sxx:0, icept=ym-slope*xm;
+  const fitData=xs.map(x=>+(icept+slope*x).toFixed(3));
+
+  const chart=buildSvgChart({
+    title:'Linearità CTDIvol vs mAs – 120 kVp',
+    type:'line', labels:pts.map(p=>p.mas+'mA'),
+    datasets:[
+      {label:'CTDIvol mis.',data:ys, color:'#4d9fff'},
+      {label:'CTDIvol TC', data:pts.map(p=>p.tc), color:'#f0a500'},
+      {label:'Fit lineare',data:fitData, color:'#34c264',dashed:true},
+    ],
+    yLabel:'mGy',
+  });
+  const table=_deltaTable(pts.map(p=>({label:p.mas+' mA',v:p.v,tc:p.tc})));
+  return `<div style="margin-bottom:8px">${r2Badge(r2,'R² linearità')}</div>`+chart+table;
+}
+
+// ── TAB: Variazione kVp ───────────────────────────────────────────────
+function tabRpt_VariazioneKv() {
+  const KVS=[80,100,120,140];
+
+  if(S.controlType==='stato'){
+    const hv=KVS.map(kv=>_cv('stato_var_kv',`kv_${kv}`,'ctdi_vol'));
+    const ht=KVS.map(kv=>_cv('stato_var_kv',`kv_${kv}`,'ctdi_vol_tc'));
+    const bv=KVS.map(kv=>_cv('stato_body',`body_kv${kv}`,'ctdi_vol'));
+    const bt=KVS.map(kv=>_cv('stato_body',`body_kv${kv}`,'ctdi_vol_tc'));
+    const hPts=KVS.map((k,i)=>({kv:k,v:hv[i]})).filter(p=>p.v!=null);
+    const bPts=KVS.map((k,i)=>({kv:k,v:bv[i]})).filter(p=>p.v!=null);
+    if(!hPts.length&&!bPts.length) return '';
+
+    const fitH=hPts.length>=3?quadraticFit(hPts.map(p=>p.kv),hPts.map(p=>p.v)):null;
+    const fitB=bPts.length>=3?quadraticFit(bPts.map(p=>p.kv),bPts.map(p=>p.v)):null;
+    const fHd=fitH?KVS.map(k=>+(fitH.a+fitH.b*k+fitH.c*k**2).toFixed(3)):Array(4).fill(null);
+    const fBd=fitB?KVS.map(k=>+(fitB.a+fitB.b*k+fitB.c*k**2).toFixed(3)):Array(4).fill(null);
+
+    const datasets=[
+      {label:'HEAD mis.',data:hv, color:'#4d9fff'},
+      {label:'HEAD TC', data:ht, color:'rgba(77,159,255,.5)', dashed:true},
+    ];
+    if(bv.some(v=>v!=null)){
+      datasets.push({label:'BODY mis.',data:bv,color:'#34c264'});
+      datasets.push({label:'BODY TC', data:bt,color:'rgba(52,194,100,.5)',dashed:true});
     }
+    if(fitH) datasets.push({label:'HEAD fit²',data:fHd,color:'#a78bfa',dashed:true});
+    if(fitB) datasets.push({label:'BODY fit²',data:fBd,color:'#f0a500',dashed:true});
+
+    const chart=buildSvgChart({
+      title:'CTDIvol vs kVp – HEAD e BODY', type:'line',
+      labels:KVS.map(String), datasets, yLabel:'mGy',
+    });
+    const table=_deltaTable(KVS.map((kv,i)=>({label:`${kv} kV (HEAD)`,v:hv[i],tc:ht[i]})));
+    const bdg=`<div style="margin-bottom:8px">
+      ${fitH?r2Badge(fitH.r2,'HEAD R²'):''}${fitB?r2Badge(fitB.r2,'BODY R²'):''}
+    </div>`;
+    return bdg+chart+table;
   }
 
-  if (charts.length) {
-    container.innerHTML = `
-      <div class="rpt-section rpt-charts-section">
-        <div class="rpt-sec-title">Grafici di sintesi</div>
-        <div class="rpt-charts-grid">${charts.join('')}</div>
-      </div>`;
-  } else {
-    container.innerHTML = '';
+  if(S.controlType==='costanza'){
+    const av =KVS.map(kv=>_cv('var_kv',`vkv_${kv}`,'ctdi100'));
+    const fv =KVS.map(kv=>_cv('var_kv',`vkv_${kv}`,'ctdi100_ph'));
+    const tc =KVS.map(kv=>_cv('var_kv',`vkv_${kv}`,'ctdi_vol_tc'));
+    const fPts=KVS.map((k,i)=>({kv:k,v:fv[i]})).filter(p=>p.v!=null);
+    const fit=fPts.length>=3?quadraticFit(fPts.map(p=>p.kv),fPts.map(p=>p.v)):null;
+    const fD=fit?KVS.map(k=>+(fit.a+fit.b*k+fit.c*k**2).toFixed(3)):Array(4).fill(null);
+    const datasets=[
+      {label:'CTDI₁₀₀ aria', data:av, color:'#4d9fff'},
+      {label:'CTDI₁₀₀ fant.',data:fv, color:'#34c264'},
+      {label:'CTDIvol TC',   data:tc, color:'#f0a500'},
+    ];
+    if(fit) datasets.push({label:'Fit quadr.',data:fD,color:'#a78bfa',dashed:true});
+    const chart=buildSvgChart({
+      title:'CTDI₁₀₀ vs kVp – Aria e Fantoccio', type:'line',
+      labels:KVS.map(String), datasets, yLabel:'mGy',
+    });
+    const bdg=`<div style="margin-bottom:8px">${fit?r2Badge(fit.r2,'R² vs kVp'):''}</div>`;
+    return bdg+chart;
   }
+
+  if(S.controlType==='accettazione'){
+    // df_head_ass: ID formato "{kv}_centro", es. "120_centro"
+    const hv=KVS.map(kv=>_cv('df_head_ass',`${kv}_centro`,'ctdi_vol'));
+    const ht=KVS.map(kv=>_cv('df_head_ass',`${kv}_centro`,'ctdi_vol_tc'));
+    if(!hv.some(v=>v!=null)) return '';
+    const chart=buildSvgChart({
+      title:'CTDIvol HEAD centro vs kVp (accettazione)', type:'line',
+      labels:KVS.map(String),
+      datasets:[
+        {label:'CTDIvol mis.',data:hv,color:'#34c264'},
+        {label:'CTDIvol TC', data:ht,color:'#f0a500'},
+      ],
+      yLabel:'mGy',
+    });
+    const table=_deltaTable(KVS.map((kv,i)=>({label:`${kv} kV`,v:hv[i],tc:ht[i]})));
+    return chart+table;
+  }
+  return '';
+}
+
+// ── TAB: Coll./Pitch/Rotazione (stato) ────────────────────────────────
+function tabRpt_CollimazionePitch() {
+  if(S.controlType!=='stato') return '';
+  const rows=[
+    {sec:'stato_coll_pitch',id:'coll_40',        label:'Coll 40mm / Pitch 1'},
+    {sec:'stato_coll_pitch',id:'pitch_042',       label:'Coll 10mm / Pitch 0.42'},
+    {sec:'stato_coll_pitch',id:'coll40_pit042',   label:'Coll 40mm / Pitch 0.42'},
+    {sec:'stato_var_rot',   id:'rot_04',          label:'Rotazione 0.4 s'},
+    {sec:'stato_var_rot',   id:'rot_1',           label:'Rotazione 1 s'},
+  ];
+  const pts=rows.map(r=>({
+    label:r.label,
+    v: _cv(r.sec,r.id,'ctdi_vol'),
+    tc:_cv(r.sec,r.id,'ctdi_vol_tc'),
+  }));
+  const deltas=pts.map(p=>_deltaPct(p.v,p.tc));
+  if(!deltas.some(d=>d!=null)) return '';
+
+  const chart=buildSvgChart({
+    title:'Δ% CTDIvol – Collimazione, Pitch, Rotazione', type:'bar',
+    labels:pts.map(p=>p.label.split('/')[0].replace('Rotazione','Rot.').trim()),
+    datasets:[{
+      label:'Δ%',
+      data:deltas,
+      colors:deltas.map(d=>_deltaColor(d)),  // colore per barra
+    }],
+    yLabel:'Δ%',
+    warnThresh:S.settings.threshold_warn,
+    failThresh:S.settings.threshold_fail,
+  });
+  const table=_deltaTable(pts.map(p=>({label:p.label,v:p.v,tc:p.tc})));
+  return chart+table;
+}
+
+// ── TAB: Collimazione geometrica (accettazione) ───────────────────────
+function tabRpt_CollimazioneGeom() {
+  if(S.controlType!=='accettazione') return '';
+  // ID collimazione: c1_25, c2_5, c5, c10, c20, c40
+  const noms=[1.25,2.5,5,10,20,40];
+  const pts=noms.map(n=>{
+    const id='c'+String(n).replace('.','_');
+    const mis=_cv('collimazione',id,'coll_mis');
+    const d=mis!=null&&n>0?Math.abs((mis-n)/n*100):null;
+    return {nom:n,mis,delta:d};
+  }).filter(p=>p.delta!=null);
+  if(!pts.length) return '';
+
+  const chart=buildSvgChart({
+    title:'Δ% Collimazione geometrica', type:'bar',
+    labels:pts.map(p=>`${p.nom}mm`),
+    datasets:[{
+      label:'Δ%', data:pts.map(p=>p.delta),
+      colors:pts.map(p=>_deltaColor(p.delta)),
+    }],
+    yLabel:'Δ%',
+    warnThresh:S.settings.threshold_warn,
+    failThresh:S.settings.threshold_fail,
+  });
+  return chart;
+}
+
+// ── TAB: Dose in Aria (accettazione) ─────────────────────────────────
+function tabRpt_DoseAria() {
+  if(S.controlType!=='accettazione') return '';
+  const kvMap={r1:120,r2:120,r3:120,r4:80,r5:100,r6:140};
+  const byKv={};
+  Object.entries(kvMap).forEach(([id,kv])=>{
+    const v=_cv('dose_aria_ass',id,'ct_exp');
+    if(v!=null){if(!byKv[kv])byKv[kv]=[];byKv[kv].push(v);}
+  });
+  const kvs=[80,100,120,140].filter(k=>byKv[k]);
+  if(kvs.length<2) return '';
+  const data=kvs.map(k=>+(byKv[k].reduce((a,b)=>a+b,0)/byKv[k].length).toFixed(3));
+  const rip120=[_cv('dose_aria_ass','r1','ct_exp'),
+                _cv('dose_aria_ass','r2','ct_exp'),
+                _cv('dose_aria_ass','r3','ct_exp')];
+  const cv=coefficientOfVariation(rip120.filter(v=>v!=null));
+  const chart=buildSvgChart({
+    title:'Dose in Aria vs kVp (assiale, media)',
+    type:'line', labels:kvs.map(String),
+    datasets:[{label:'CT Exp. medio (mGy·cm)',data,color:'#4d9fff'}],
+    yLabel:'mGy·cm',
+  });
+  const bdg=cv!=null?`<div style="margin-bottom:8px">${cvBadge(cv)}</div>`:'';
+  return bdg+chart;
+}
+
+// ── TAB: Rumore / Iterazione (accettazione) ───────────────────────────
+function tabRpt_Rumore() {
+  if(S.controlType!=='accettazione') return '';
+  const lvls=[0,10,20,30,40,50,60,70,80,90,100];
+  const r1=lvls.map(l=>_cv('ric_iter_1',`ri1_${l}`,'rumore'));
+  const r2=lvls.map(l=>_cv('ric_iter_2',`ri2_${l}`,'rumore'));
+  if(!r1.some(v=>v!=null)&&!r2.some(v=>v!=null)) return '';
+  const datasets=[];
+  if(r1.some(v=>v!=null)) datasets.push({label:'Serie 1',data:r1,color:'#4d9fff'});
+  if(r2.some(v=>v!=null)) datasets.push({label:'Serie 2',data:r2,color:'#34c264'});
+  return buildSvgChart({
+    title:'Rumore (HU) vs Livello Iterazione %',
+    type:'line', labels:lvls.map(String),
+    datasets, yLabel:'HU',
+  });
+}
+
+// ── TAB: 5 Posizioni HEAD (accettazione) ─────────────────────────────
+function tabRpt_5Posizioni() {
+  if(S.controlType!=='accettazione') return '';
+  // 120 kV, 5 posizioni: centro, ore_3, ore_6, ore_9, ore_12
+  const posIds=['centro','ore_3','ore_6','ore_9','ore_12'];
+  const posLabels=['Centro','Ore 3','Ore 6','Ore 9','Ore 12'];
+  const mis=posIds.map(p=>_cv('df_head_ass',`120_${p}`,'ctdi_vol'));
+  const tc =posIds.map(p=>_cv('df_head_ass',`120_${p}`,'ctdi_vol_tc'));
+  if(!mis.some(v=>v!=null)) return '';
+  const chart=buildSvgChart({
+    title:'CTDIvol HEAD 120 kV – 5 posizioni', type:'bar',
+    labels:posLabels,
+    datasets:[
+      {label:'CTDIvol mis.',data:mis,color:'#4d9fff'},
+      {label:'CTDIvol TC', data:tc, color:'#f0a500'},
+    ],
+    yLabel:'mGy',
+  });
+  const table=_deltaTable(posIds.map((p,i)=>({label:posLabels[i],v:mis[i],tc:tc[i]})));
+  return chart+table;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// renderReportCharts  –  tab interattive (schermo) + stampa completa
+// ═══════════════════════════════════════════════════════════════════════
+function renderReportCharts() {
+  const container=document.getElementById('rpt-charts-container');
+  if(!container||!S.control) return;
+
+  // Definizione tab per tipo controllo
+  let tabsDef=[];
+  if(S.controlType==='stato'){
+    tabsDef=[
+      {id:'rip', label:'🔄 Riproducibilità',  fn:tabRpt_Riproducibilita},
+      {id:'mas', label:'📈 Linearità mAs',     fn:tabRpt_LinearitaMas},
+      {id:'kv',  label:'📐 Variazione kVp',    fn:tabRpt_VariazioneKv},
+      {id:'cp',  label:'📏 Coll./Pitch/Rot.',  fn:tabRpt_CollimazionePitch},
+    ];
+  } else if(S.controlType==='costanza'){
+    tabsDef=[
+      {id:'rip', label:'🔄 Riproducibilità',  fn:tabRpt_Riproducibilita},
+      {id:'kv',  label:'📐 Variazione kVp',   fn:tabRpt_VariazioneKv},
+    ];
+  } else if(S.controlType==='accettazione'){
+    tabsDef=[
+      {id:'aria',label:'☢️ Dose in Aria',       fn:tabRpt_DoseAria},
+      {id:'kv',  label:'📐 Variazione kVp',     fn:tabRpt_VariazioneKv},
+      {id:'pos', label:'🎯 5 Posizioni HEAD',   fn:tabRpt_5Posizioni},
+      {id:'coll',label:'📏 Collimazione',        fn:tabRpt_CollimazioneGeom},
+      {id:'rui', label:'🔊 Rumore/Iter.',        fn:tabRpt_Rumore},
+    ];
+  }
+
+  // Genera HTML di ogni tab (filtra vuote)
+  const tabs=tabsDef.map(t=>({...t,html:t.fn()})).filter(t=>t.html);
+  if(!tabs.length){container.innerHTML='';return;}
+
+  const btnHtml=tabs.map((t,i)=>
+    `<button class="rpt-gtab${i===0?' active':''}"
+      onclick="switchRptTab('${t.id}')" data-rtab="${t.id}">${t.label}</button>`
+  ).join('');
+
+  // Pannelli: visibili a schermo uno alla volta, tutti visibili in stampa
+  const paneHtml=tabs.map((t,i)=>
+    `<div class="rpt-gtab-pane${i===0?' active':''}" id="rpt-gtab-${t.id}">${t.html}</div>`
+  ).join('');
+
+  container.innerHTML=`
+    <div class="rpt-section rpt-charts-section">
+      <div class="rpt-sec-title">Grafici di analisi</div>
+      <div class="rpt-gtabs no-print">${btnHtml}</div>
+      ${paneHtml}
+    </div>`;
+}
+
+function switchRptTab(id) {
+  document.querySelectorAll('.rpt-gtab').forEach(b=>
+    b.classList.toggle('active', b.dataset.rtab===id));
+  document.querySelectorAll('.rpt-gtab-pane').forEach(p=>
+    p.classList.toggle('active', p.id===`rpt-gtab-${id}`));
 }
 
 // ═══════════════════════════════════════════════════════════════════════
