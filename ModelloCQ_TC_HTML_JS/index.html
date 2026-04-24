@@ -419,11 +419,69 @@ button { cursor: pointer; }
 }
 .sign-field:focus { border-bottom-color: var(--accent); }
 
+/* ── Blocchi giudizio SFM/RIR nel report ──────────────────── */
+.rpt-giu-box {
+  border: 1px solid var(--border); border-radius: var(--r);
+  margin-bottom: 14px; overflow: hidden;
+}
+.rpt-giu-title {
+  background: #2c5f8a; color: white;
+  font-size: .78rem; font-weight: 700;
+  padding: 5px 12px; line-height: 1.4;
+}
+.rpt-giu-title.rir { background: #3d6b55; }
+.rpt-giu-body { padding: 10px 14px 12px; background: var(--bg2); }
+.rpt-giu-label {
+  font-size: .75rem; color: var(--muted);
+  font-weight: 600; margin-bottom: 6px; line-height: 1.35;
+}
+.rpt-giu-opts { display: flex; flex-direction: column; gap: 5px; margin-bottom: 4px; }
+.rpt-giu-opts.row { flex-direction: row; gap: 24px; }
+.rpt-giu-radio { display: flex; align-items: center; gap: 7px; font-size: .87rem; cursor: pointer; }
+.rpt-giu-radio input { accent-color: var(--accent); cursor: pointer; }
+.rpt-limit-wrap { margin: 2px 0 2px 22px; }
+.rpt-limit-wrap input {
+  font-size: .82rem; background: transparent; border: none;
+  border-bottom: 1px solid var(--border); color: var(--text);
+  width: 100%; outline: none; padding: 2px 0;
+}
+.rpt-textarea {
+  width: 100%; min-height: 56px; resize: vertical;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 4px; color: var(--text);
+  font-family: var(--sans); font-size: .85rem;
+  padding: 6px 8px; outline: none;
+}
+.rpt-firma-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 10px; padding-top: 7px;
+  border-top: 1px solid var(--border);
+}
+.rpt-firma-label { white-space: nowrap; color: var(--muted); font-weight: 600; font-size: .75rem; }
+.rpt-luogo-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  border-top: 1px solid var(--border); margin-top: 6px; padding-top: 10px;
+}
+.rpt-luogo-box .rpt-giu-label { margin-bottom: 4px; }
+.rpt-luogo-box input {
+  font-size: .87rem; background: transparent; border: none;
+  border-bottom: 1px solid var(--border); color: var(--text);
+  width: 100%; outline: none; padding: 3px 0;
+}
+
 @media print {
   .rpt-charts-grid { grid-template-columns: 1fr 1fr; }
   .rpt-chart-box { background: white; border-color: #ddd; }
   .rpt-chart-title { color: #666; }
   .sign-field { border-bottom-color: #aaa; color: black; }
+  .rpt-giu-box  { border-color: #ccc; break-inside: avoid; }
+  .rpt-giu-title { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .rpt-giu-body { background: white; }
+  .rpt-textarea { background: white; border-color: #ccc; color: black; min-height: 40px; }
+  .rpt-limit-wrap input, .rpt-luogo-box input { color: black; border-bottom-color: #aaa; }
+  .rpt-firma-row { border-top-color: #ccc; }
+  .rpt-firma-row input { color: black; border-bottom-color: #aaa; }
+  .rpt-luogo-grid { border-top-color: #ccc; }
 }
 
 /* ═══════════════════════════════════════════════
@@ -558,6 +616,7 @@ button { cursor: pointer; }
   <div class="breadcrumb" id="breadcrumb"></div>
   <button class="btn btn-ghost btn-sm no-print" onclick="toggleTheme()" id="btn-theme" title="Cambia tema">🌙</button>
   <button class="btn btn-ghost btn-sm no-print" onclick="openSettings()" title="Impostazioni soglie">⚙</button>
+  <button class="btn btn-ghost btn-sm no-print" onclick="openImportExport()" title="Import / Export dati">⇅ Sync</button>
   <button class="btn btn-ghost btn-sm no-print" onclick="seedDemoData()" title="Popola dati dimostrativi" id="btn-demo">🎲 Demo</button>
   <button class="btn btn-ghost btn-sm no-print" id="btn-report" onclick="showReport()" style="display:none">📄 Report</button>
 </header>
@@ -708,6 +767,72 @@ button { cursor: pointer; }
       <button class="btn btn-ghost" onclick="closeModal('modal-confirm')">Annulla</button>
       <button class="btn btn-fail" id="mc-ok">Conferma</button>
     </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     MODAL IMPORT / EXPORT
+════════════════════════════════════════════ -->
+<div class="modal-bg" id="modal-sync">
+  <div class="modal" style="max-width:560px;width:100%">
+    <h3 style="margin:0 0 16px;font-size:1rem">⇅ Import / Export dati</h3>
+
+    <!-- TAB SWITCHER -->
+    <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:8px">
+      <button class="btn btn-sm" id="sync-tab-exp" onclick="syncTab('exp')" style="font-size:.78rem">📤 Esporta</button>
+      <button class="btn btn-sm btn-ghost" id="sync-tab-imp" onclick="syncTab('imp')" style="font-size:.78rem">📥 Importa</button>
+    </div>
+
+    <!-- EXPORT PANEL -->
+    <div id="sync-panel-exp">
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:10px">
+        Scarica un file JSON con i controlli selezionati da inviare al DB centrale.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div>
+          <label style="font-size:.72rem;color:var(--muted);display:block;margin-bottom:3px">Macchina</label>
+          <select id="exp-machine" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 6px;font-size:.82rem">
+            <option value="">— Tutte —</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:.72rem;color:var(--muted);display:block;margin-bottom:3px">Data da</label>
+          <input type="date" id="exp-date-from" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 6px;font-size:.82rem">
+        </div>
+        <div>
+          <label style="font-size:.72rem;color:var(--muted);display:block;margin-bottom:3px">Data a</label>
+          <input type="date" id="exp-date-to" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 6px;font-size:.82rem">
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <button class="btn btn-ghost btn-sm" onclick="setExpToday()" style="width:100%;font-size:.78rem">📅 Solo oggi</button>
+        </div>
+      </div>
+      <div id="exp-status" style="display:none;font-size:.78rem;margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="doExport()" style="flex:1">📤 Scarica JSON</button>
+        <button class="btn btn-ghost" onclick="closeModal('modal-sync')">Annulla</button>
+      </div>
+    </div>
+
+    <!-- IMPORT PANEL -->
+    <div id="sync-panel-imp" style="display:none">
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:10px">
+        Seleziona un file JSON esportato da un altro laptop. Puoi fare una <strong>anteprima</strong> prima di importare definitivamente.
+      </div>
+      <input type="file" id="imp-file" accept=".json" style="display:none" onchange="onImportFile()">
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('imp-file').click()" style="margin-bottom:8px;width:100%">
+        📂 Seleziona file JSON…
+      </button>
+      <div id="imp-filename" style="font-size:.78rem;color:var(--muted);margin-bottom:8px;min-height:16px"></div>
+      <div id="imp-preview" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px;font-size:.78rem;margin-bottom:10px;line-height:1.7"></div>
+      <div id="imp-status" style="display:none;font-size:.78rem;margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" id="imp-btn-preview" onclick="doImport(true)" disabled style="flex:1;font-size:.8rem">🔍 Anteprima</button>
+        <button class="btn btn-primary" id="imp-btn-import" onclick="doImport(false)" disabled style="flex:1;font-size:.8rem">📥 Importa</button>
+        <button class="btn btn-ghost" onclick="closeModal('modal-sync')">Chiudi</button>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -953,26 +1078,6 @@ const QC_DEF = {
         { id:'ctdi_vol_tc', label:'CTDIvol TC display',  unit:'mGy', type:'number', isDeltaB:true },
       ],
     },
-    // ── Card mancanti: Fantoccio CI (stesse del tipo accettazione) ────────
-    {
-      id:'cost_ci_head', tab:'Fantoccio CI',
-      title:'Dose Fantoccio HEAD – Assiale (CI)',
-      desc:'4 kV × 5 posizioni. FOV head, 100 mA. Stessa configurazione dell\'accettazione.',
-      paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll. (mm)'),P('rot_s','Rot. (s)'),P('fov','FOV'),P('posiz','Posiz.')],
-      defaultRows: doseFanRows(KV4, POS5, '10 mm', null, '1 s'),
-      fields: CTDI_FIELDS,
-    },
-    {
-      id:'cost_ci_body', tab:'Fantoccio CI',
-      title:'Dose Fantoccio BODY – Assiale (CI)',
-      desc:'4 kV × 5 posizioni. FOV large body, 300 mA. Stessa configurazione dell\'accettazione.',
-      paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll. (mm)'),P('rot_s','Rot. (s)'),P('fov','FOV'),P('posiz','Posiz.')],
-      defaultRows: doseFanRows(KV4, POS5, '10 mm', null, '1 s').map(r => ({
-        ...r, id:'body_'+r.id,
-        params: r.params.map(pp => pp.id==='fov' ? P('fov','body') : pp.id==='mA' ? P('mA',300) : pp)
-      })),
-      fields: CTDI_FIELDS,
-    },
   ],
 
   // ── PROVA DI STATO ANNUALE ─────────────────────────────────────────────
@@ -983,12 +1088,12 @@ const QC_DEF = {
     {
       id:'stato_riprod', tab:'Diodo HEAD',
       title:'Riproducibilità – Diodo HEAD Spirale (3× 120 kVp)',
-      desc:'3 misure ripetute a 120 kVp, 100 mA, Coll=20 mm, Pitch=0.969, Rot=1 s, FOV=head. Verificano la riproducibilità del sistema prima delle variazioni parametriche.',
+      desc:'3 misure ripetute a 120 kVp, 100 mA, Coll=10 mm, Pitch=1, Rot=1 s, FOV=head.',
       paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll. (mm)'),P('pitch','Pitch'),P('rot_s','Rot. (s)'),P('fov','FOV')],
       defaultRows:[
-        {id:'st_r1', params:[P('kV',120),P('mA',100),P('coll_mm',20),P('pitch',0.969),P('rot_s',1),P('fov','head')]},
-        {id:'st_r2', params:[P('kV',120),P('mA',100),P('coll_mm',20),P('pitch',0.969),P('rot_s',1),P('fov','head')]},
-        {id:'st_r3', params:[P('kV',120),P('mA',100),P('coll_mm',20),P('pitch',0.969),P('rot_s',1),P('fov','head')]},
+        {id:'st_r1', params:[P('kV',120),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',1),P('fov','head')]},
+        {id:'st_r2', params:[P('kV',120),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',1),P('fov','head')]},
+        {id:'st_r3', params:[P('kV',120),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',1),P('fov','head')]},
       ],
       fields: CTDI_FIELDS,
     },
@@ -1021,7 +1126,7 @@ const QC_DEF = {
     {
       id:'stato_coll_pitch', tab:'Collimazione/Pitch',
       title:'Variazione collimazione e pitch – HEAD',
-      desc:'kV=120, mA=100, rot=0.5s, FOV=head. Coll: 10mm/40mm. Pitch: 1 / 0.42.',
+      desc:'kV=120, mA=100, rot=1s, FOV=head. Coll: 10mm/40mm. Pitch: 1 / 0.42.',
       paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll.'),P('pitch','Pitch'),P('rot_s','Rot.(s)')],
       defaultRows:[
         {id:'coll_40',        params:[P('kV',120),P('mA',100),P('coll_mm',40),P('pitch',1),   P('rot_s',1)]},
@@ -1044,7 +1149,7 @@ const QC_DEF = {
     {
       id:'stato_body', tab:'Fantoccio BODY',
       title:'Dose in Fantoccio BODY – Spirale',
-      desc:'FOV=large body, coll=10mm, pitch=0.969, rot=0.5s. Variazione kVp: 80–100–120–140 kV.',
+      desc:'FOV=large body, coll=10mm, pitch=0.969, rot=1s. Variazione kVp: 80–100–120–140 kV.',
       paramFields:[P('kV','kV'),P('mA','mA'),P('coll_mm','Coll.'),P('pitch','Pitch'),P('rot_s','Rot.(s)')],
       defaultRows:[
         {id:'body_kv80',  params:[P('kV',80), P('mA',100),P('coll_mm',10),P('pitch',0.969),P('rot_s',1)]},
@@ -2306,76 +2411,88 @@ function renderReport() {
     <!-- ── Grafici SVG (iniettati da renderReportCharts) ── -->
     <div id="rpt-charts-container"></div>
 
-    <div class="conc-grid no-print">
-      <div class="conc-box">
-        <h4>Qualità tecnica (art.163 c.5 D.Lgs 101/2020)</h4>
-        ${['adeguato','non_adeguato','adeguato_limitazioni'].map((v,i)=>`
-          <label class="radio-row">
-            <input type="radio" name="rq_qual" value="${v}" ${c.conclusion_quality===v?'checked':''} onchange="setConclusion('conclusion_quality','${v}')">
-            <label>${['Adeguato','Non adeguato','Adeguato con limitazioni'][i]}</label>
-          </label>`).join('')}
+    <!-- ── Blocco SFM – art. 163 comma 5 ── -->
+    <div class="rpt-giu-box">
+      <div class="rpt-giu-title">
+        Specialista in Fisica Medica — Giudizio sulla qualità tecnica ai sensi dell'art. 163, comma 5, del D.Lgs. 31/07/2020 n. 101
       </div>
-      <div class="conc-box">
-        <h4>Idoneità uso clinico (art.163 c.6 D.Lgs 101/2020)</h4>
-        ${['idoneo','non_idoneo','idoneo_limitazioni'].map((v,i)=>`
-          <label class="radio-row">
-            <input type="radio" name="rq_idon" value="${v}" ${c.conclusion_idoneita===v?'checked':''} onchange="setConclusion('conclusion_idoneita','${v}')">
-            <label>${['Idoneo','Non idoneo','Idoneo con limitazioni'][i]}</label>
-          </label>`).join('')}
-      </div>
-    </div>
-    <div class="conc-grid no-print" style="grid-template-columns:1fr">
-      <div class="conc-box">
-        <h4>Mantenimento criteri accettabilità (art.163 c.10)</h4>
-        <div style="display:flex;gap:20px">
-          ${['si','no'].map(v=>`
-            <label class="radio-row">
-              <input type="radio" name="rq_mant" value="${v}" ${c.conclusion_maint===v?'checked':''} onchange="setConclusion('conclusion_maint','${v}')">
-              <label>${v==='si'?'Sì':'No'}</label>
-            </label>`).join('')}
+      <div class="rpt-giu-body">
+        <div class="rpt-giu-label">L'attrezzatura medico-radiologica, in relazione ai risultati delle prove di controllo di qualità effettuate, presenta una qualità tecnica:</div>
+        <div class="rpt-giu-opts">
+          <label class="rpt-giu-radio"><input type="radio" name="rq_qual" value="adeguato"     ${c.conclusion_quality==='adeguato'    ?'checked':''} onchange="setConclusion('conclusion_quality','adeguato')">     <span>adeguato</span></label>
+          <label class="rpt-giu-radio"><input type="radio" name="rq_qual" value="non_adeguato" ${c.conclusion_quality==='non_adeguato'?'checked':''} onchange="setConclusion('conclusion_quality','non_adeguato')"> <span>non adeguato</span></label>
+        </div>
+
+        <div class="rpt-giu-label" style="margin-top:10px">Verifica del mantenimento dei criteri specifici di accettabilità ai sensi dell'art. 163, comma 10:</div>
+        <div class="rpt-giu-opts row">
+          <label class="rpt-giu-radio"><input type="radio" name="rq_mant" value="si" ${c.conclusion_maint==='si'?'checked':''} onchange="setConclusion('conclusion_maint','si')"> <span>SÌ</span></label>
+          <label class="rpt-giu-radio"><input type="radio" name="rq_mant" value="no" ${c.conclusion_maint==='no'?'checked':''} onchange="setConclusion('conclusion_maint','no')"> <span>NO</span></label>
+        </div>
+
+        <div class="rpt-giu-label" style="margin-top:8px">Note:</div>
+        <textarea id="rpt-notes" class="rpt-textarea" onchange="saveNotes()">${c.notes||''}</textarea>
+
+        <div class="rpt-firma-row">
+          <span class="rpt-firma-label">Lo Specialista in Fisica Medica</span>
+          <input id="sign-physicist" class="sign-field" type="text" placeholder="Nome e Cognome"
+            value="${S._signatures?.physicist||''}" onchange="saveSignatures()" style="flex:1">
         </div>
       </div>
     </div>
 
-    <div class="print-bottom-block">
-      <div class="box no-print" style="margin-bottom:16px">
-        <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);display:block;margin-bottom:8px">
-          Note / Interventi correttivi (art.163 c.12)
-        </label>
-        <textarea id="rpt-notes" style="width:100%;min-height:80px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--sans);font-size:.9rem;padding:8px;resize:vertical;outline:none"
-          onchange="saveNotes()">${c.notes||''}</textarea>
+    <!-- ── Blocco RIR – art. 163 commi 6 e 12 ── -->
+    <div class="rpt-giu-box">
+      <div class="rpt-giu-title rir">
+        Responsabile dell'Impianto Radiologico — Giudizio di idoneità all'uso clinico ai sensi dell'art. 163, comma 6, del D.Lgs. 31/07/2020 n. 101
       </div>
-
-      <!-- Firme editabili – salvate in DB (tabella signatures) -->
-      <div class="sign-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-        <div class="box">
-          <div style="font-size:.75rem;color:var(--muted);margin-bottom:6px">Lo Specialista in Fisica Medica</div>
-          <input id="sign-physicist" class="sign-field" type="text"
-            placeholder="Nome e Cognome"
-            value="${S._signatures?.physicist||''}"
-            onchange="saveSignatures()">
-          <div style="border-top:1px solid var(--border);padding-top:6px;font-size:.75rem;color:var(--muted);margin-top:26px">Firma e timbro</div>
+      <div class="rpt-giu-body">
+        <div class="rpt-giu-label">Tenendo conto dei risultati del programma di controllo della qualità e delle valutazioni dello Specialista in Fisica Medica (art. 163, comma 6), l'attrezzatura in esame risulta:</div>
+        <div class="rpt-giu-opts">
+          <label class="rpt-giu-radio"><input type="radio" name="rq_idon" value="idoneo"             ${c.conclusion_idoneita==='idoneo'            ?'checked':''} onchange="setConclusion('conclusion_idoneita','idoneo')">             <span>idoneo</span></label>
+          <label class="rpt-giu-radio"><input type="radio" name="rq_idon" value="non_idoneo"         ${c.conclusion_idoneita==='non_idoneo'        ?'checked':''} onchange="setConclusion('conclusion_idoneita','non_idoneo')">         <span>non idoneo</span></label>
+          <label class="rpt-giu-radio"><input type="radio" name="rq_idon" value="idoneo_limitazioni" ${c.conclusion_idoneita==='idoneo_limitazioni'?'checked':''} onchange="setConclusion('conclusion_idoneita','idoneo_limitazioni')"> <span>idoneo con limitazioni:</span></label>
+          <div class="rpt-limit-wrap"><input type="text" id="rq-idon-lim" placeholder="descrivere le limitazioni…"></div>
         </div>
-        <div class="box">
-          <div style="font-size:.75rem;color:var(--muted);margin-bottom:6px">Il Responsabile dell'impianto radiologico</div>
-          <input id="sign-responsible" class="sign-field" type="text"
-            placeholder="Nome e Cognome"
-            value="${S._signatures?.responsible||''}"
-            onchange="saveSignatures()">
-          <div style="border-top:1px solid var(--border);padding-top:6px;font-size:.75rem;color:var(--muted);margin-top:26px">Firma e timbro</div>
-        </div>
-      </div>
 
-      <!-- Footer di stampa: visibile solo su carta -->
-      <div class="rpt-print-footer no-screen" style="display:none">
-        <img src="${LOGO_MAURIZIANO}" alt="Mauriziano">
-        <span>
-          TC·QC – Struttura Complessa Interaziendale Fisica Sanitaria, A.O. Ordine Mauriziano Torino &nbsp;|&nbsp;
-          Sviluppato da Christian Bracco &lt;cbracco@mauriziano.it&gt;
-        </span>
+        <div class="rpt-giu-label" style="margin-top:10px">Verifica del mantenimento dei criteri specifici di accettabilità ai sensi dell'art. 163, comma 10:</div>
+        <div class="rpt-giu-opts row">
+          <label class="rpt-giu-radio"><input type="radio" name="rq_mant" value="si" ${c.conclusion_maint==='si'?'checked':''} onchange="setConclusion('conclusion_maint','si')"> <span>SÌ</span></label>
+          <label class="rpt-giu-radio"><input type="radio" name="rq_mant" value="no" ${c.conclusion_maint==='no'?'checked':''} onchange="setConclusion('conclusion_maint','no')"> <span>NO</span></label>
+        </div>
+
+        <div class="rpt-giu-label" style="margin-top:8px">Opportuni interventi correttivi ai sensi dell'art. 163, comma 12:</div>
+        <textarea id="rpt-interventions" class="rpt-textarea" placeholder="Descrivere gli interventi correttivi da segnalare all'esercente, se necessari…"></textarea>
+
+        <div class="rpt-firma-row">
+          <span class="rpt-firma-label">Il Responsabile dell'Impianto Radiologico</span>
+          <input id="sign-responsible" class="sign-field" type="text" placeholder="Nome e Cognome"
+            value="${S._signatures?.responsible||''}" onchange="saveSignatures()" style="flex:1">
+        </div>
       </div>
     </div>
-    <div class="box no-print" style="display:flex;justify-content:space-between;align-items:center">
+
+    <!-- ── Luogo/data + timbro ── -->
+    <div class="rpt-luogo-grid">
+      <div class="rpt-luogo-box">
+        <div class="rpt-giu-label">Luogo e data</div>
+        <input type="text" id="sign-place-date" placeholder="es. Torino, 24/04/2026">
+      </div>
+      <div class="rpt-luogo-box">
+        <div class="rpt-giu-label">Timbro e firma del Responsabile dell'Impianto</div>
+        <input type="text" id="sign-stamp" placeholder="Nome e cognome…">
+      </div>
+    </div>
+
+    <!-- ── Footer di stampa ── -->
+    <div class="rpt-print-footer no-screen" style="display:none">
+      <img src="${LOGO_MAURIZIANO}" alt="Mauriziano">
+      <span>
+        TC·QC – Struttura Complessa Interaziendale Fisica Sanitaria, A.O. Ordine Mauriziano Torino &nbsp;|&nbsp;
+        Sviluppato da Christian Bracco &lt;cbracco@mauriziano.it&gt;
+      </span>
+    </div>
+
+    <div class="box no-print" style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
       <button class="btn btn-primary" onclick="saveConclusions()">💾 Salva conclusioni</button>
       <span style="font-family:var(--mono);font-size:.8rem;color:var(--muted)">Data: ${c.date}</span>
     </div>
@@ -2459,6 +2576,171 @@ async function saveSignatures() {
   const responsible = document.getElementById('sign-responsible')?.value || '';
   S._signatures = { physicist, responsible };
   await api.put('/api/signatures', { control_id: S.control.id, physicist, responsible });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
+// IMPORT / EXPORT
+// ═══════════════════════════════════════════════════════════════════════
+let _importPayload = null; // JSON parsed dall'ultimo file caricato
+
+function openImportExport() {
+  // Popola select macchine
+  const sel = document.getElementById('exp-machine');
+  sel.innerHTML = '<option value="">— Tutte —</option>';
+  (S.machines || []).forEach(m => {
+    const o = document.createElement('option');
+    o.value = m.id; o.textContent = `${m.name}${m.hospital ? ' – ' + m.hospital : ''}`;
+    sel.appendChild(o);
+  });
+  // Preset: macchina corrente
+  if (S.machine) sel.value = S.machine.id;
+  // Preset date: oggi
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('exp-date-from').value = today;
+  document.getElementById('exp-date-to').value   = today;
+
+  syncTab('exp');
+  document.getElementById('imp-preview').style.display = 'none';
+  document.getElementById('imp-status').style.display  = 'none';
+  document.getElementById('exp-status').style.display  = 'none';
+  document.getElementById('imp-filename').textContent  = '';
+  _importPayload = null;
+  document.getElementById('imp-btn-preview').disabled = true;
+  document.getElementById('imp-btn-import').disabled  = true;
+  openModal('modal-sync');
+}
+
+function syncTab(tab) {
+  document.getElementById('sync-panel-exp').style.display = tab === 'exp' ? '' : 'none';
+  document.getElementById('sync-panel-imp').style.display = tab === 'imp' ? '' : 'none';
+  document.getElementById('sync-tab-exp').className = `btn btn-sm ${tab==='exp' ? '' : 'btn-ghost'}`;
+  document.getElementById('sync-tab-imp').className = `btn btn-sm ${tab==='imp' ? '' : 'btn-ghost'}`;
+}
+
+function setExpToday() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('exp-date-from').value = today;
+  document.getElementById('exp-date-to').value   = today;
+}
+
+async function doExport() {
+  const machineId = document.getElementById('exp-machine').value;
+  const dateFrom  = document.getElementById('exp-date-from').value;
+  const dateTo    = document.getElementById('exp-date-to').value;
+  const box       = document.getElementById('exp-status');
+
+  const params = new URLSearchParams();
+  if (machineId) params.set('machine_id', machineId);
+  if (dateFrom)  params.set('date_from',  dateFrom);
+  if (dateTo)    params.set('date_to',    dateTo);
+
+  box.style.display = '';
+  box.textContent   = '⏳ Preparazione export…';
+  box.style.color   = 'var(--muted)';
+
+  try {
+    const data = await api.get(`/api/export/controls?${params}`);
+    if (!data.controls?.length) {
+      box.textContent = '⚠ Nessun controllo trovato con i filtri indicati.';
+      box.style.color = 'var(--warn)';
+      return;
+    }
+
+    // Costruisce il nome file
+    const mac  = document.getElementById('exp-machine').selectedOptions[0]?.text.split(' –')[0] || 'tutti';
+    const dfr  = dateFrom || 'start';
+    const dto  = dateTo   || 'end';
+    const fname = `TCQC_${mac.replace(/[^a-zA-Z0-9]/g,'_')}_${dfr}${dfr!==dto?'_'+dto:''}.json`;
+
+    // Download
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = fname; a.click();
+    URL.revokeObjectURL(url);
+
+    const nc = data.controls.length;
+    const nm = data.measurements.length;
+    box.textContent = `✓ Esportati ${nc} controlli, ${nm} misure → ${fname}`;
+    box.style.color = 'var(--ok)';
+  } catch(e) {
+    box.textContent = `Errore: ${e.message}`;
+    box.style.color = 'var(--fail)';
+  }
+}
+
+function onImportFile() {
+  const file = document.getElementById('imp-file').files[0];
+  if (!file) return;
+  document.getElementById('imp-filename').textContent = `📄 ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+  document.getElementById('imp-preview').style.display = 'none';
+  document.getElementById('imp-status').style.display  = 'none';
+  _importPayload = null;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      _importPayload = JSON.parse(e.target.result);
+      document.getElementById('imp-btn-preview').disabled = false;
+      document.getElementById('imp-btn-import').disabled  = false;
+    } catch {
+      document.getElementById('imp-filename').textContent = '❌ File non valido (JSON malformato)';
+      document.getElementById('imp-btn-preview').disabled = true;
+      document.getElementById('imp-btn-import').disabled  = true;
+    }
+  };
+  reader.readAsText(file);
+}
+
+async function doImport(preview) {
+  if (!_importPayload) return;
+  const previewBox = document.getElementById('imp-preview');
+  const statusBox  = document.getElementById('imp-status');
+  const label      = preview ? '🔍 Anteprima' : '📥 Importazione';
+
+  statusBox.style.display = '';
+  statusBox.textContent   = `⏳ ${label} in corso…`;
+  statusBox.style.color   = 'var(--muted)';
+  previewBox.style.display = 'none';
+
+  try {
+    const url  = preview ? '/api/import?preview=1' : '/api/import';
+    const data = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(_importPayload),
+    }).then(r => r.json());
+
+    if (!data.ok) throw new Error(data.error || 'Errore sconosciuto');
+
+    const r = data.report;
+    const lines = [
+      `<strong>Macchine</strong>: ${r.machines.matched} trovate, ${r.machines.created} ${preview?'da creare':'create'}`,
+      ...r.machines.detail.map(d => `&nbsp;&nbsp;· ${d.name} → <em>${d.action}${d.id?' (id '+d.id+')':''}</em>`),
+      `<strong>Controlli</strong>: ${r.controls.updated} aggiornati, ${r.controls.created} ${preview?'da creare':'creati'}`,
+      ...r.controls.detail.map(d => `&nbsp;&nbsp;· ${d.date} ${d.type} → <em>${d.action}${d.id?' (id '+d.id+')':''}</em>`),
+      `<strong>Misure</strong>: ${r.measurements.upserted}`,
+      `<strong>Firme</strong>: ${r.signatures.upserted}`,
+    ];
+    previewBox.innerHTML  = lines.join('<br>');
+    previewBox.style.display = '';
+
+    if (preview) {
+      statusBox.textContent = '✓ Anteprima completata. Controlla i dettagli e poi clicca Importa.';
+      statusBox.style.color = 'var(--ok)';
+    } else {
+      statusBox.textContent = '✓ Import completato con successo!';
+      statusBox.style.color = 'var(--ok)';
+      _importPayload = null;
+      document.getElementById('imp-btn-import').disabled = true;
+      // Ricarica lista macchine e controlli
+      await loadMachines();
+    }
+  } catch(e) {
+    statusBox.textContent = `Errore: ${e.message}`;
+    statusBox.style.color = 'var(--fail)';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
