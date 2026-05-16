@@ -216,6 +216,20 @@ Bun.serve({
         }
       }
 
+      // ── Unlock (sblocca) una misura accettata ───────────────────
+      const unlockMatch = path.match(/^\/api\/measurements\/unlock$/);
+      if (unlockMatch && m === "POST") {
+        const b = await parseBody(req);
+        if (!b.control_id || !b.section_id || !b.row_id)
+          return json({ error: "control_id, section_id, row_id required" }, 400);
+        db.run(
+          `UPDATE measurements SET accepted=0, accepted_at=''
+           WHERE control_id=? AND section_id=? AND row_id=?`,
+          [b.control_id, b.section_id, b.row_id]
+        );
+        return json({ ok: true });
+      }
+
       // ── Settings ────────────────────────────────────────────────
       if (path === "/api/settings") {
         if (m === "GET") {

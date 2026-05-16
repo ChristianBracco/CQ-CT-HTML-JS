@@ -1230,6 +1230,7 @@ function propagateCrossRules() {
 
     ensureCache(TGT_SEC, TGT_ROW);
 
+    let masChanged = false;
     PROPAGATED_FIELDS.forEach(fid => {
       const values = SRC_ROWS
         .map(r => { const raw = S.cache?.[`${SRC_SEC}_${r}`]?.values?.[fid]; return (raw !== undefined && raw !== "" && !isNaN(raw)) ? parseFloat(raw) : null; })
@@ -1240,6 +1241,7 @@ function propagateCrossRules() {
       if (!S.cache[tgtKey].derived) S.cache[tgtKey].derived = {};
       S.cache[tgtKey].values[fid]  = mean;
       S.cache[tgtKey].derived[fid] = "mean_riproducibilita";
+      masChanged = true;
       const input = document.querySelector(`[data-sec="${TGT_SEC}"][data-row="${TGT_ROW}"][data-fid="${fid}"]`);
       if (!input) return;
       input.value = mean.toFixed(2);
@@ -1250,7 +1252,78 @@ function propagateCrossRules() {
       setTimeout(() => { input.style.outline = ""; }, 500);
     });
 
-    refreshCard(TGT_SEC, TGT_ROW);
+    if (masChanged) {
+      saveMeasurement(TGT_SEC, TGT_ROW);
+      refreshCard(TGT_SEC, TGT_ROW);
+    }
+
+    // ── STATO: riprod → Variazione tempo rotazione rot_1 (stessi parametri: 120kV, 100mA, coll=10, pitch=1, rot=1) ──
+    const TGT_SEC_ROT  = "stato_var_rot";
+    const TGT_ROW_ROT  = "rot_1";
+    const tgtKeyRot    = `${TGT_SEC_ROT}_${TGT_ROW_ROT}`;
+
+    ensureCache(TGT_SEC_ROT, TGT_ROW_ROT);
+
+    let rotChanged = false;
+    PROPAGATED_FIELDS.forEach(fid => {
+      const values = SRC_ROWS
+        .map(r => { const raw = S.cache?.[`${SRC_SEC}_${r}`]?.values?.[fid]; return (raw !== undefined && raw !== "" && !isNaN(raw)) ? parseFloat(raw) : null; })
+        .filter(v => v !== null);
+      if (values.length !== SRC_ROWS.length) return;
+      const mean = Math.round(values.reduce((a,b)=>a+b,0) / values.length * 100) / 100;
+      if (!S.cache[tgtKeyRot].values)  S.cache[tgtKeyRot].values  = {};
+      if (!S.cache[tgtKeyRot].derived) S.cache[tgtKeyRot].derived = {};
+      S.cache[tgtKeyRot].values[fid]  = mean;
+      S.cache[tgtKeyRot].derived[fid] = "mean_riproducibilita";
+      rotChanged = true;
+      const input = document.querySelector(`[data-sec="${TGT_SEC_ROT}"][data-row="${TGT_ROW_ROT}"][data-fid="${fid}"]`);
+      if (!input) return;
+      input.value = mean.toFixed(2);
+      input.readOnly = true;
+      input.classList.add("autofilled");
+      input.title = `Media delle misure di riproducibilità (stato_riprod)\nValore: ${mean.toFixed(2)} — calcolato automaticamente`;
+      input.style.outline = "2px solid var(--accent)";
+      setTimeout(() => { input.style.outline = ""; }, 500);
+    });
+
+    if (rotChanged) {
+      saveMeasurement(TGT_SEC_ROT, TGT_ROW_ROT);
+      refreshCard(TGT_SEC_ROT, TGT_ROW_ROT);
+    }
+
+    // ── STATO: riprod → Dose al variare dei kVp kv_120 (stessi parametri: 120kV, 100mA, coll=10, pitch=1, rot=1) ──
+    const TGT_SEC_KV  = "stato_var_kv";
+    const TGT_ROW_KV  = "kv_120";
+    const tgtKeyKv    = `${TGT_SEC_KV}_${TGT_ROW_KV}`;
+
+    ensureCache(TGT_SEC_KV, TGT_ROW_KV);
+
+    let kvChanged = false;
+    PROPAGATED_FIELDS.forEach(fid => {
+      const values = SRC_ROWS
+        .map(r => { const raw = S.cache?.[`${SRC_SEC}_${r}`]?.values?.[fid]; return (raw !== undefined && raw !== "" && !isNaN(raw)) ? parseFloat(raw) : null; })
+        .filter(v => v !== null);
+      if (values.length !== SRC_ROWS.length) return;
+      const mean = Math.round(values.reduce((a,b)=>a+b,0) / values.length * 100) / 100;
+      if (!S.cache[tgtKeyKv].values)  S.cache[tgtKeyKv].values  = {};
+      if (!S.cache[tgtKeyKv].derived) S.cache[tgtKeyKv].derived = {};
+      S.cache[tgtKeyKv].values[fid]  = mean;
+      S.cache[tgtKeyKv].derived[fid] = "mean_riproducibilita";
+      kvChanged = true;
+      const input = document.querySelector(`[data-sec="${TGT_SEC_KV}"][data-row="${TGT_ROW_KV}"][data-fid="${fid}"]`);
+      if (!input) return;
+      input.value = mean.toFixed(2);
+      input.readOnly = true;
+      input.classList.add("autofilled");
+      input.title = `Media delle misure di riproducibilità (stato_riprod)\nValore: ${mean.toFixed(2)} — calcolato automaticamente`;
+      input.style.outline = "2px solid var(--accent)";
+      setTimeout(() => { input.style.outline = ""; }, 500);
+    });
+
+    if (kvChanged) {
+      saveMeasurement(TGT_SEC_KV, TGT_ROW_KV);
+      refreshCard(TGT_SEC_KV, TGT_ROW_KV);
+    }
   }
 
   // ── COSTANZA: riprod_ctdi (dose_air) → var_kv (vkv_120, ctdi100) ───
@@ -1264,9 +1337,15 @@ function propagateCrossRules() {
 
 function countCardLinks(secId, rowId) {
   if (secId === "stato_riprod" && ["st_r1","st_r2","st_r3"].includes(rowId))
-    return PROPAGATED_FIELDS.length;
+    return PROPAGATED_FIELDS.length * 3; // → stato_lin_mas/mas_100 + stato_var_rot/rot_1 + stato_var_kv/kv_120
   if (secId === "riprod_ctdi" && ["rip_1","rip_2","rip_3"].includes(rowId))
     return 1; // dose_air → var_kv.ctdi100
+  if (secId === "stato_lin_mas" && rowId === "mas_100")
+    return PROPAGATED_FIELDS.length; // riceve da stato_riprod
+  if (secId === "stato_var_rot" && rowId === "rot_1")
+    return PROPAGATED_FIELDS.length; // riceve da stato_riprod
+  if (secId === "stato_var_kv" && rowId === "kv_120")
+    return PROPAGATED_FIELDS.length; // riceve da stato_riprod
   return 0;
 }
 
@@ -1489,6 +1568,8 @@ async function openSession() {
   renderSessionHeader();
   renderTabs();
   renderActiveTab();
+  // Propaga valori derivati (media riproducibilità → card collegate)
+  propagateCrossRules();
   updateProgress();
   showView('measurements');
 }
@@ -1565,6 +1646,7 @@ function selectTab(tab) {
   S.activeTab = tab;
   renderTabs();
   renderActiveTab();
+  propagateCrossRules();
 }
 
 function renderActiveTab() {
@@ -1690,6 +1772,11 @@ function renderCard(sec, row) {
     :
     `
       <div class="cfoot no-print">
+        <button class="btn btn-ghost btn-xs"
+                onclick="unlockCard('${sec.id}','${row.id}')"
+                title="Sblocca per modificare">
+          🔓 Sblocca
+        </button>
         <span class="badge badge-ok">✓ accettato</span>
       </div>
     `;
@@ -1865,6 +1952,11 @@ function renderField(secId, rowId, field, currentVal, isAccepted, row) {
 
 	if(cache?.derived?.[field.id])
 	  titleAttr = `title="Valore calcolato dalla media delle misure di riproducibilità"`;
+
+  const isDerived = !!cache?.derived?.[field.id];
+  const derivedCls = isDerived ? 'autofilled' : '';
+  const derivedRO  = isDerived ? 'readonly' : '';
+
   const prevBadge = prevVal !== '' ? `<span class="iprev" title="Ultima: ${prevVal}">↩ ${prevVal}</span>` : '';
 
   return `<div class="igroup">
@@ -1872,8 +1964,8 @@ function renderField(secId, rowId, field, currentVal, isAccepted, row) {
       ${field.label} <span class="iunit">${field.unit||''}</span> ${prevBadge}
     </label>
     <input type="${field.type==='number'?'number':'text'}" step="any"
-      class="${inputCls}" value="${val}" ${phAttr} ${titleAttr}
-      ${isAccepted?'disabled':''}
+      class="${inputCls} ${derivedCls}" value="${val}" ${phAttr} ${titleAttr}
+      ${isAccepted?'disabled':''} ${derivedRO}
       data-sec="${secId}" data-row="${rowId}" data-fid="${field.id}"
       oninput="onInputChange(this,false)"
       onchange="onInputChange(this,true)">
@@ -2139,6 +2231,8 @@ async function acceptCard(secId, rowId) {
   cache.accepted_at = new Date().toISOString();
   await saveMeasurement(secId, rowId);
   refreshCard(secId, rowId);
+  propagateCrossRules();
+  updateProgress();
 }
 
 async function repeatCard(secId, rowId) {
@@ -2157,6 +2251,19 @@ async function repeatCard(secId, rowId) {
     cache.accepted_at = '';
     await saveMeasurement(secId, rowId);
     refreshCard(secId, rowId);
+  });
+}
+
+async function unlockCard(secId, rowId) {
+  confirm2('Sblocca misura', 'Sbloccare la misura accettata per consentire modifiche? I valori inseriti verranno mantenuti.', async () => {
+    ensureCache(secId, rowId);
+    const cache = S.cache[`${secId}_${rowId}`];
+    cache.accepted = false;
+    cache.accepted_at = '';
+    await saveMeasurement(secId, rowId);
+    refreshCard(secId, rowId);
+    propagateCrossRules();
+    updateProgress();
   });
 }
 
@@ -3056,14 +3163,29 @@ function buildSvgChart(cfg) {
   ];
   if(!allForScale.length) return '';
 
-  const {min:yMin, max:yMax, ticks:yTicks} = niceAxisRange(allForScale, 5);
+  // Se forceYZero è attivo, includi lo zero nella scala Y
+  if (cfg.forceYZero) allForScale.push(0);
+
+  let {min:yMin, max:yMax, ticks:yTicks} = niceAxisRange(allForScale, 5);
+
+  // Se forceYZero, assicura che l'asse parta da 0 (niente valori negativi per dosi)
+  if (cfg.forceYZero && yMin < 0) {
+    yMin = 0;
+    yTicks = yTicks.filter(t => t >= 0);
+    if (!yTicks.length || yTicks[0] !== 0) yTicks.unshift(0);
+  }
+
   const yRange = yMax - yMin;
 
   const n = cfg.labels.length;
-  // toX: calcola la posizione X di un punto; per bar usa slot centrati
-  const toX = i => cfg.type==='bar'
-    ? P.l + (i+0.5)*cW/n
-    : P.l + (n<=1 ? cW/2 : i*cW/(n-1));
+
+  // toX: calcola la posizione X di un punto
+  // Spaziatura uniforme per indice (categorica) – adatta a verificare linearità visivamente
+  const toX = i => {
+    if (cfg.type === 'bar') return P.l + (i + 0.5) * cW / n;
+    if (n <= 1) return P.l + cW / 2;
+    return P.l + i * cW / (n - 1);
+  };
   // toY: clamp incluso per sicurezza (non dovrebbe servire con scala corretta)
   const toY = v => {
     const raw = P.t + cH*(1-(v-yMin)/yRange);
@@ -3352,6 +3474,7 @@ function tabRpt_LinearitaMas() {
       {label:'Fit lineare',data:fitData, color:'#34c264',dashed:true},
     ],
     yLabel:'mGy',
+    forceYZero: true,
   });
   const table=_deltaTable(pts.map(p=>({label:p.mas+' mA',v:p.v,tc:p.tc})));
   return `<div style="margin-bottom:8px">${r2Badge(r2,'R² linearità')}</div>`+chart+table;
@@ -3389,6 +3512,7 @@ function tabRpt_VariazioneKv() {
     const chart=buildSvgChart({
       title:'CTDIvol vs kVp – HEAD e BODY', type:'line',
       labels:KVS.map(String), datasets, yLabel:'mGy',
+      forceYZero: true,
     });
     const table=_deltaTable(KVS.map((kv,i)=>({label:`${kv} kV (HEAD)`,v:hv[i],tc:ht[i]})));
     const bdg=`<div style="margin-bottom:8px">
@@ -3413,6 +3537,7 @@ function tabRpt_VariazioneKv() {
     const chart=buildSvgChart({
       title:'CTDI₁₀₀ vs kVp – Aria e Fantoccio', type:'line',
       labels:KVS.map(String), datasets, yLabel:'mGy',
+      forceYZero: true,
     });
     const bdg=`<div style="margin-bottom:8px">${fit?r2Badge(fit.r2,'R² vs kVp'):''}</div>`;
     return bdg+chart;
@@ -3431,6 +3556,7 @@ function tabRpt_VariazioneKv() {
         {label:'CTDIvol TC', data:ht,color:'#f0a500'},
       ],
       yLabel:'mGy',
+      forceYZero: true,
     });
     const table=_deltaTable(KVS.map((kv,i)=>({label:`${kv} kV`,v:hv[i],tc:ht[i]})));
     return chart+table;
@@ -3520,6 +3646,7 @@ function tabRpt_DoseAria() {
     type:'line', labels:kvs.map(String),
     datasets:[{label:'CT Exp. medio (mGy·cm)',data,color:'#4d9fff'}],
     yLabel:'mGy·cm',
+    forceYZero: true,
   });
   const bdg=cv!=null?`<div style="margin-bottom:8px">${cvBadge(cv)}</div>`:'';
   return bdg+chart;
@@ -3539,6 +3666,7 @@ function tabRpt_Rumore() {
     title:'Rumore (HU) vs Livello Iterazione %',
     type:'line', labels:lvls.map(String),
     datasets, yLabel:'HU',
+    forceYZero: true,
   });
 }
 
@@ -3559,6 +3687,7 @@ function tabRpt_5Posizioni() {
       {label:'CTDIvol TC', data:tc, color:'#f0a500'},
     ],
     yLabel:'mGy',
+    forceYZero: true,
   });
   const table=_deltaTable(posIds.map((p,i)=>({label:posLabels[i],v:mis[i],tc:tc[i]})));
   return chart+table;
