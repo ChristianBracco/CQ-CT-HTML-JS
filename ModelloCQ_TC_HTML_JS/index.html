@@ -183,7 +183,8 @@ button { cursor: pointer; }
    MACHINES VIEW
 ═══════════════════════════════════════════════ */
 .machines-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 12px; margin-bottom: 20px; }
-.mc-card { position: relative; }
+.machines-grid .box + .box { margin-top: 0; }
+.mc-card { position: relative; min-height: 124px; padding-right: 88px; }
 .mc-card .mc-name { font-weight: 700; font-size: .95rem; margin-bottom: 4px; }
 .mc-card .mc-det  { font-size: .78rem; color: var(--muted); font-family: var(--mono); margin-bottom: 2px; }
 .mc-card .mc-acts { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; }
@@ -638,10 +639,16 @@ button { cursor: pointer; }
       <span class="ctrl-dot"></span> Accettazione
     </button>
     <button class="ctrl-btn" data-type="costanza" onclick="pickCtrlType('costanza')">
-      <span class="ctrl-dot"></span> Costanza <small style="color:var(--muted)">(semestrale)</small>
+      <span class="ctrl-dot"></span> Costanza
+    </button>
+    <button class="ctrl-btn" data-type="semestrale" onclick="pickCtrlType('semestrale')">
+      <span class="ctrl-dot"></span> Semestrale
+    </button>
+    <button class="ctrl-btn" data-type="annuale" onclick="pickCtrlType('annuale')">
+      <span class="ctrl-dot"></span> Annuale
     </button>
     <button class="ctrl-btn" data-type="stato" onclick="pickCtrlType('stato')">
-      <span class="ctrl-dot"></span> Stato <small style="color:var(--muted)">(annuale)</small>
+      <span class="ctrl-dot"></span> Stato
     </button>
   </div>
 </aside>
@@ -666,7 +673,7 @@ button { cursor: pointer; }
     <div class="page-sub">Macchine TC registrate nel sistema.</div>
     <div class="machines-grid" id="machines-grid"></div>
     <div class="box" style="max-width:500px">
-      <div class="sb-label" style="margin-bottom:14px">Nuova macchina</div>
+      <div class="sb-label" id="machine-form-title" style="margin-bottom:14px">Nuova macchina</div>
       <div class="form-grid">
         <div class="field full"><label>Nome / Identificativo *</label><input id="fm-name" type="text" placeholder="es. TC Radiologia"></div>
         <div class="field"><label>Marca / Modello</label><input id="fm-model" type="text" placeholder="es. Philips Incisive CT"></div>
@@ -674,7 +681,10 @@ button { cursor: pointer; }
         <div class="field"><label>Azienda / Ospedale</label><input id="fm-hospital" type="text" placeholder="es. ASL TO3 Rivoli"></div>
         <div class="field"><label>Sala / Unità operativa</label><input id="fm-dept" type="text" placeholder="es. Radiologia"></div>
       </div>
-      <div class="row-btns"><button class="btn btn-primary" onclick="saveMachine()">Salva macchina</button></div>
+      <div class="row-btns">
+        <button class="btn btn-primary" id="machine-save-btn" onclick="saveMachine()">Salva macchina</button>
+        <button class="btn btn-ghost" id="machine-cancel-btn" onclick="cancelEditMachine()" style="display:none">Annulla modifica</button>
+      </div>
     </div>
   </div>
 
@@ -1063,6 +1073,10 @@ const QC_DEF = {
         { id:'dose_air', label:'Dose free air', unit:'mGy·cm', type:'number' },
         { id:'pct_media', label:'% vs media', unit:'%', type:'number', isReprod:true },
       ],
+      meanSource: {
+        rowCount: 3,
+        targets: [{ sectionId:'var_kv', rowId:'vkv_120', fields:{ dose_air:'ctdi100' } }],
+      },
     },
     {
       id:'var_kv', tab:'Dose',
@@ -1080,7 +1094,7 @@ const QC_DEF = {
     },
   ],
 
-  // ── PROVA DI STATO ANNUALE ─────────────────────────────────────────────
+  // ── PROTOCOLLO STATO / ANNUALE ─────────────────────────────────────────
   // Struttura analoga al semestrale: sezioni per tipo di verifica.
   // Ogni sezione ha il proprio contesto fisico e parametri variati.
   stato: [
@@ -1096,6 +1110,7 @@ const QC_DEF = {
         {id:'st_r3', params:[P('kV',120),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',1),P('fov','head')]},
       ],
       fields: CTDI_FIELDS,
+      meanSource: { rowCount: 3, matchTargets: true },
     },
     {
       id:'stato_lin_mas', tab:'Linearità',
@@ -1109,6 +1124,7 @@ const QC_DEF = {
         {id:'mas_300', params:[P('kV',120),P('mA',300),P('coll_mm',10),P('pitch',1),P('rot_s',1)]},
       ],
       fields: CTDI_FIELDS,
+      meanTarget: true,
     },
     {
       id:'stato_var_kv', tab:'Linearità',
@@ -1122,6 +1138,7 @@ const QC_DEF = {
         {id:'kv_140', params:[P('kV',140),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',1)]},
       ],
       fields: CTDI_FIELDS,
+      meanTarget: true,
     },
     {
       id:'stato_coll_pitch', tab:'Collimazione/Pitch',
@@ -1134,6 +1151,7 @@ const QC_DEF = {
         {id:'coll40_pit042',  params:[P('kV',120),P('mA',100),P('coll_mm',40),P('pitch',0.42),P('rot_s',1)]},
       ],
       fields: CTDI_FIELDS,
+      meanTarget: true,
     },
     {
       id:'stato_var_rot', tab:'Collimazione/Pitch',
@@ -1145,6 +1163,7 @@ const QC_DEF = {
         {id:'rot_1',  params:[P('kV',120),P('mA',100),P('coll_mm',10),P('pitch',1),P('rot_s',1)  ]},
       ],
       fields: CTDI_FIELDS,
+      meanTarget: true,
     },
     {
       id:'stato_body', tab:'Fantoccio BODY',
@@ -1162,6 +1181,27 @@ const QC_DEF = {
   ],
 
 };
+
+// Periodic schedules and generic verification categories remain distinct types.
+QC_DEF.semestrale = QC_DEF.costanza;
+QC_DEF.annuale = QC_DEF.stato;
+
+const CONTROL_LABELS = {
+  accettazione: 'Accettazione',
+  costanza: 'Costanza',
+  semestrale: 'Semestrale',
+  annuale: 'Annuale',
+  stato: 'Stato',
+};
+const CONTROL_REPORT_LABELS = {
+  accettazione: 'Prova di Accettazione',
+  costanza: 'Prova di Costanza',
+  semestrale: 'Prova Semestrale',
+  annuale: 'Prova Annuale',
+  stato: 'Prova di Stato',
+};
+const usesSemestraleProtocol = type => type === 'costanza' || type === 'semestrale';
+const usesStatoProtocol = type => type === 'stato' || type === 'annuale';
 
 
 
@@ -1181,8 +1221,8 @@ function debugCache() {
 
 // ═══════════════════════════════════════════════════════════════════════
 // CROSS CONTROL PROPAGATION
-// Stato:    riproducibilità (3 mis.) → linearità mAs (100 mA)
-// Costanza: riproducibilità (3 mis.) → var_kv (120 kV) campo ctdi100
+// Protocollo Stato/Annuale: riproducibilità (3 mis.) → linearità mAs (100 mA)
+// Protocollo Costanza/Semestrale: riproducibilità (3 mis.) → var_kv (120 kV) campo ctdi100
 // ═══════════════════════════════════════════════════════════════════════
 
 const PROPAGATED_FIELDS = [
@@ -1218,7 +1258,8 @@ function _propagateMean(srcSec, srcRows, srcFid, tgtSec, tgtRow, tgtFid) {
   refreshCard(tgtSec, tgtRow);
 }
 
-function propagateCrossRules() {
+// Legacy implementation, no longer invoked by the application.
+function legacyPropagateCrossRules() {
 
   // ── STATO: riprod → linearità mAs 100 ──────────────────────────────
   if (S.controlType === 'stato') {
@@ -1297,6 +1338,8 @@ function propagateCrossRules() {
     const tgtKeyKv    = `${TGT_SEC_KV}_${TGT_ROW_KV}`;
 
     ensureCache(TGT_SEC_KV, TGT_ROW_KV);
+	
+	
 
     let kvChanged = false;
     PROPAGATED_FIELDS.forEach(fid => {
@@ -1324,6 +1367,93 @@ function propagateCrossRules() {
       saveMeasurement(TGT_SEC_KV, TGT_ROW_KV);
       refreshCard(TGT_SEC_KV, TGT_ROW_KV);
     }
+	
+	
+// ── STATO: riproducibilità → Variazione collimazione/pitch HEAD ───────────
+// Propaga automaticamente la media delle misure di riproducibilità
+// verso la card HEAD con:
+// 120 kV, 100 mA, coll=47 mm, pitch=1, rot=1s
+// in modo che CTDI100 e dose_air rimangano sincronizzati.
+
+	const TGT_SEC_COLL  = "stato_coll_pitch";
+	const TGT_ROW_COLL  = "coll_47";
+	const tgtKeyColl    = `${TGT_SEC_COLL}_${TGT_ROW_COLL}`;
+
+	ensureCache(TGT_SEC_COLL, TGT_ROW_COLL);
+
+	let collChanged = false;
+
+	PROPAGATED_FIELDS.forEach(fid => {
+
+	  const values = SRC_ROWS
+		.map(r => {
+		  const raw = S.cache?.[`${SRC_SEC}_${r}`]?.values?.[fid];
+
+		  return (
+			raw !== undefined &&
+			raw !== "" &&
+			!isNaN(raw)
+		  )
+			? parseFloat(raw)
+			: null;
+		})
+		.filter(v => v !== null);
+
+	  // servono tutte le misure
+	  if (values.length !== SRC_ROWS.length) return;
+
+	  const mean = Math.round(
+		values.reduce((a,b)=>a+b,0) / values.length * 100
+	  ) / 100;
+
+	  if (!S.cache[tgtKeyColl].values)
+		S.cache[tgtKeyColl].values = {};
+
+	  if (!S.cache[tgtKeyColl].derived)
+		S.cache[tgtKeyColl].derived = {};
+
+	  // salva media propagata
+	  S.cache[tgtKeyColl].values[fid] = mean;
+	  S.cache[tgtKeyColl].derived[fid] = "mean_riproducibilita";
+
+	  collChanged = true;
+
+	  // aggiorna input visibile
+	  const input = document.querySelector(
+		`[data-sec="${TGT_SEC_COLL}"][data-row="${TGT_ROW_COLL}"][data-fid="${fid}"]`
+	  );
+
+	  if (!input) return;
+
+	  input.value = mean.toFixed(2);
+	  input.readOnly = true;
+
+	  input.classList.add("autofilled");
+
+	  input.title =
+		`Media delle misure di riproducibilità (stato_riprod)\n` +
+		`Valore: ${mean.toFixed(2)} — calcolato automaticamente`;
+
+	  // piccolo flash visivo
+	  input.style.outline = "2px solid var(--accent)";
+	  setTimeout(() => {
+		input.style.outline = "";
+	  }, 500);
+
+	});
+
+	// salva e refresh card
+	if (collChanged) {
+
+	  saveMeasurement(TGT_SEC_COLL, TGT_ROW_COLL);
+
+	  refreshCard(TGT_SEC_COLL, TGT_ROW_COLL);
+
+	}
+		
+	
+	
+	
   }
 
   // ── COSTANZA: riprod_ctdi (dose_air) → var_kv (vkv_120, ctdi100) ───
@@ -1336,17 +1466,98 @@ function propagateCrossRules() {
 }
 
 function countCardLinks(secId, rowId) {
-  if (secId === "stato_riprod" && ["st_r1","st_r2","st_r3"].includes(rowId))
-    return PROPAGATED_FIELDS.length * 3; // → stato_lin_mas/mas_100 + stato_var_rot/rot_1 + stato_var_kv/kv_120
-  if (secId === "riprod_ctdi" && ["rip_1","rip_2","rip_3"].includes(rowId))
-    return 1; // dose_air → var_kv.ctdi100
-  if (secId === "stato_lin_mas" && rowId === "mas_100")
-    return PROPAGATED_FIELDS.length; // riceve da stato_riprod
-  if (secId === "stato_var_rot" && rowId === "rot_1")
-    return PROPAGATED_FIELDS.length; // riceve da stato_riprod
-  if (secId === "stato_var_kv" && rowId === "kv_120")
-    return PROPAGATED_FIELDS.length; // riceve da stato_riprod
-  return 0;
+  return resolveMeanPropagationLinks().reduce((count, link) => {
+    const isSource = link.sourceSec.id === secId &&
+      link.sourceRows.some(row => row.id === rowId);
+    const isTarget = link.targetSec.id === secId && link.targetRow.id === rowId;
+    return count + (isSource || isTarget ? link.fields.length : 0);
+  }, 0);
+}
+
+function rowParamValues(row) {
+  return Object.fromEntries((row.params || []).map(param => [param.id, String(param.val)]));
+}
+
+function hasSameReferenceParams(referenceRow, targetRow) {
+  const reference = rowParamValues(referenceRow);
+  const target = Object.entries(rowParamValues(targetRow));
+  const comparable = target.filter(([id]) => reference[id] !== undefined);
+  return comparable.length > 0 &&
+    comparable.every(([id, value]) => reference[id] === value);
+}
+
+function commonMeanFields(sourceSec, targetSec, fieldMap) {
+  const targetIds = new Set(targetSec.fields.map(field => field.id));
+  if (fieldMap) {
+    return Object.entries(fieldMap)
+      .filter(([sourceId, targetId]) =>
+        sourceSec.fields.some(field => field.id === sourceId) && targetIds.has(targetId))
+      .map(([sourceId, targetId]) => ({ sourceId, targetId }));
+  }
+  return sourceSec.fields
+    .filter(field => targetIds.has(field.id))
+    .map(field => ({ sourceId:field.id, targetId:field.id }));
+}
+
+function resolveMeanPropagationLinks() {
+  const sections = QC_DEF[S.controlType] || [];
+  const links = [];
+
+  sections.filter(sec => sec.meanSource).forEach(sourceSec => {
+    const rule = sourceSec.meanSource;
+    const sourceRows = getSectionRows(sourceSec).slice(0, rule.rowCount);
+    if (sourceRows.length !== rule.rowCount) return;
+
+    if (rule.matchTargets) {
+      sections.filter(sec => sec.meanTarget).forEach(targetSec => {
+        getSectionRows(targetSec)
+          .filter(row => hasSameReferenceParams(sourceRows[0], row))
+          .forEach(targetRow => {
+            const fields = commonMeanFields(sourceSec, targetSec);
+            if (fields.length) links.push({ sourceSec, sourceRows, targetSec, targetRow, fields });
+          });
+      });
+    }
+
+    (rule.targets || []).forEach(target => {
+      const targetSec = sections.find(sec => sec.id === target.sectionId);
+      const targetRow = targetSec && getSectionRows(targetSec).find(row => row.id === target.rowId);
+      if (!targetSec || !targetRow) return;
+      const fields = commonMeanFields(sourceSec, targetSec, target.fields);
+      if (fields.length) links.push({ sourceSec, sourceRows, targetSec, targetRow, fields });
+    });
+  });
+
+  return links;
+}
+
+function applyMeanPropagation(link) {
+  ensureCache(link.targetSec.id, link.targetRow.id);
+  const targetKey = `${link.targetSec.id}_${link.targetRow.id}`;
+  const targetCache = S.cache[targetKey];
+  if (!targetCache.derived) targetCache.derived = {};
+  let changed = false;
+
+  link.fields.forEach(({ sourceId, targetId }) => {
+    const values = link.sourceRows.map(row =>
+      parseFloat(S.cache?.[`${link.sourceSec.id}_${row.id}`]?.values?.[sourceId]));
+    if (values.some(value => Number.isNaN(value))) return;
+
+    const mean = Math.round(values.reduce((sum, value) => sum + value, 0) / values.length * 100) / 100;
+    if (parseFloat(targetCache.values[targetId]) === mean &&
+        targetCache.derived[targetId] === 'mean_riproducibilita') return;
+    targetCache.values[targetId] = mean;
+    targetCache.derived[targetId] = 'mean_riproducibilita';
+    changed = true;
+  });
+
+  if (!changed) return;
+  saveMeasurement(link.targetSec.id, link.targetRow.id);
+  refreshCard(link.targetSec.id, link.targetRow.id);
+}
+
+function propagateMeanRules() {
+  resolveMeanPropagationLinks().forEach(applyMeanPropagation);
 }
 
 
@@ -1362,6 +1573,7 @@ const S = {
   cache: {},     // key: `${secId}_${rowId}` → {id, values, accepted, accepted_at}
   expOverrides: {}, // key: sectionId → rows array override
   _epEditSec: null, // section being edited in params modal
+  editingMachineId: null,
   _confirmCb: null,
   editingCardParams: null, // key: `${secId}_${rowId}` → true when card params are in edit mode
 };
@@ -1406,7 +1618,7 @@ function updateBreadcrumb() {
   const parts = [];
   if (S.machine) parts.push(`<strong>${S.machine.name}</strong>`);
   if (S.controlType) {
-    const lbl = {accettazione:'Accettazione',costanza:'Costanza',stato:'Stato'}[S.controlType];
+    const lbl = CONTROL_LABELS[S.controlType] || S.controlType;
     parts.push(`› ${lbl}`);
   }
   if (S.control) parts.push(`› ${S.control.date}`);
@@ -1434,6 +1646,7 @@ function renderMachinesGrid(machines) {
   document.getElementById('machines-grid').innerHTML = machines.map(m => `
     <div class="box mc-card">
       <div class="mc-acts">
+        <button class="ic-btn" onclick="editMachine(${m.id})" title="Modifica">✎</button>
         <button class="ic-btn del" onclick="deleteMachine(${m.id})" title="Elimina">✕</button>
       </div>
       <div class="mc-name">${m.name}</div>
@@ -1446,12 +1659,43 @@ function renderMachinesGrid(machines) {
 async function saveMachine() {
   const name = document.getElementById('fm-name').value.trim();
   if (!name) { alert('Inserire un nome'); return; }
-  await api.post('/api/machines', {
+  const values = {
     name, model: v('fm-model'), serial_number: v('fm-serial'),
     hospital: v('fm-hospital'), department: v('fm-dept'),
-  });
+  };
+  const saved = S.editingMachineId
+    ? await api.put(`/api/machines/${S.editingMachineId}`, values)
+    : await api.post('/api/machines', values);
+  if (S.machine?.id === saved.id) {
+    S.machine = saved;
+    updateBreadcrumb();
+  }
+  cancelEditMachine();
+  await loadMachines();
+}
+
+async function editMachine(id) {
+  const machines = await api.get('/api/machines');
+  const machine = machines.find(m => m.id === id);
+  if (!machine) return;
+  S.editingMachineId = id;
+  document.getElementById('fm-name').value = machine.name || '';
+  document.getElementById('fm-model').value = machine.model || '';
+  document.getElementById('fm-serial').value = machine.serial_number || '';
+  document.getElementById('fm-hospital').value = machine.hospital || '';
+  document.getElementById('fm-dept').value = machine.department || '';
+  document.getElementById('machine-form-title').textContent = 'Modifica macchina';
+  document.getElementById('machine-save-btn').textContent = 'Salva modifiche';
+  document.getElementById('machine-cancel-btn').style.display = '';
+  document.getElementById('fm-name').focus();
+}
+
+function cancelEditMachine() {
+  S.editingMachineId = null;
   ['fm-name','fm-model','fm-serial','fm-hospital','fm-dept'].forEach(id => document.getElementById(id).value='');
-  loadMachines();
+  document.getElementById('machine-form-title').textContent = 'Nuova macchina';
+  document.getElementById('machine-save-btn').textContent = 'Salva macchina';
+  document.getElementById('machine-cancel-btn').style.display = 'none';
 }
 
 async function deleteMachine(id) {
@@ -1496,7 +1740,7 @@ function pickCtrlType(type) {
 }
 
 function setupSessionView() {
-  const lbl = {accettazione:'Accettazione',costanza:'Costanza (Semestrale)',stato:'Stato (Annuale)'}[S.controlType];
+  const lbl = CONTROL_LABELS[S.controlType] || S.controlType;
   document.getElementById('vs-title').textContent = lbl;
   document.getElementById('vs-sub').textContent   = `Macchina: ${S.machine.name}`;
   document.getElementById('fs-date').value         = new Date().toISOString().split('T')[0];
@@ -1569,7 +1813,7 @@ async function openSession() {
   renderTabs();
   renderActiveTab();
   // Propaga valori derivati (media riproducibilità → card collegate)
-  propagateCrossRules();
+  propagateMeanRules();
   updateProgress();
   showView('measurements');
 }
@@ -1604,7 +1848,7 @@ function getSectionRows(secDef) {
 // ═══════════════════════════════════════════════════════════════════════
 function renderSessionHeader() {
   const c = S.control, m = S.machine;
-  const lbl = {accettazione:'Prova di Accettazione',costanza:'Prova di Costanza Semestrale',stato:'Prova di Stato Annuale'}[S.controlType];
+  const lbl = CONTROL_REPORT_LABELS[S.controlType] || S.controlType;
   document.getElementById('sess-hdr').innerHTML = `
     <div class="sh-info">
       <div class="sh-title">${lbl}</div>
@@ -1646,7 +1890,7 @@ function selectTab(tab) {
   S.activeTab = tab;
   renderTabs();
   renderActiveTab();
-  propagateCrossRules();
+  propagateMeanRules();
 }
 
 function renderActiveTab() {
@@ -2092,7 +2336,7 @@ function onInputChange(input, doRefresh = false) {
   recomputeReprod(sec);
 
   // 5️⃣ aggiorna eventuali dipendenze tra card
-  propagateCrossRules();
+  propagateMeanRules();
 
   // 6️⃣ autosave debounced
   clearTimeout(input._saveTimer);
@@ -2231,7 +2475,7 @@ async function acceptCard(secId, rowId) {
   cache.accepted_at = new Date().toISOString();
   await saveMeasurement(secId, rowId);
   refreshCard(secId, rowId);
-  propagateCrossRules();
+  propagateMeanRules();
   updateProgress();
 }
 
@@ -2262,7 +2506,7 @@ async function unlockCard(secId, rowId) {
     cache.accepted_at = '';
     await saveMeasurement(secId, rowId);
     refreshCard(secId, rowId);
-    propagateCrossRules();
+    propagateMeanRules();
     updateProgress();
   });
 }
@@ -2415,7 +2659,7 @@ function showReport() {
 
 function renderReport() {
   const c = S.control, m = S.machine;
-  const lbl = {accettazione:'Prova di Accettazione',costanza:'Prova di Costanza Semestrale',stato:'Prova di Stato Annuale'}[S.controlType];
+  const lbl = CONTROL_REPORT_LABELS[S.controlType] || S.controlType;
   const defs = QC_DEF[S.controlType]||[];
 
   let totalOk=0, totalWarn=0, totalFail=0, totalNone=0;
@@ -2866,8 +3110,8 @@ async function seedDemoData() {
     const today = new Date().toISOString().split('T')[0];
     const iso   = s => new Date().toISOString();
 
-    // ── Crea i tre controlli se non esistono già ──
-    const types = ['accettazione', 'costanza', 'stato'];
+    // ── Crea i controlli se non esistono già ──
+    const types = ['accettazione', 'costanza', 'semestrale', 'annuale', 'stato'];
     const created = {};
     for (const t of types) {
       const existing = await api.get(`/api/controls?machine_id=${S.machine.id}&type=${t}&limit=1`);
@@ -2951,14 +3195,15 @@ async function seedDemoData() {
     }
 
     // ────────── COSTANZA ──────────
-    const cosId = created['costanza'].id;
+    const cosIds = [created.costanza.id, created.semestrale.id];
 
     // riprod_ctdi: 3 misure quasi identiche – pct_media calcolata sulla media reale
     const ripDoses = [1,2,3].map(() => +(14.2 + noise() * 0.4).toFixed(2));
     const ripMedia = ripDoses.reduce((s,v)=>s+v,0) / ripDoses.length;
     for (const [idx, n] of [[0,1],[1,2],[2,3]]) {
       const pct = +((ripDoses[idx] - ripMedia) / ripMedia * 100).toFixed(3);
-      await saveMeas(cosId, 'riprod_ctdi', `rip_${n}`, { dose_air: ripDoses[idx], pct_media: pct });
+      for (const cosId of cosIds)
+        await saveMeas(cosId, 'riprod_ctdi', `rip_${n}`, { dose_air: ripDoses[idx], pct_media: pct });
     }
 
     // var_kv
@@ -2967,11 +3212,12 @@ async function seedDemoData() {
       const c100 = +(b + noise()).toFixed(2);
       const cph  = +(c100 * 0.72 + noise()).toFixed(2);
       const cvtc = +(cph * 0.97 + noise() * 0.2).toFixed(2);
-      await saveMeas(cosId, 'var_kv', `vkv_${kv}`, { ctdi100: c100, ctdi100_ph: cph, ctdi_vol_tc: cvtc });
+      for (const cosId of cosIds)
+        await saveMeas(cosId, 'var_kv', `vkv_${kv}`, { ctdi100: c100, ctdi100_ph: cph, ctdi_vol_tc: cvtc });
     }
 
     // ────────── STATO ──────────
-    const statId = created['stato'].id;
+    const statIds = [created.annuale.id, created.stato.id];
 
     // stato_lin_mas: CTDIvol varia con mAs
     const masRows = [
@@ -2983,10 +3229,11 @@ async function seedDemoData() {
     for (const r of masRows) {
       const cvol = +(13.5 * r.base + noise()).toFixed(2);
       const cvtc = +(cvol + noise() * 0.3).toFixed(2);
-      await saveMeas(statId, 'stato_lin_mas', r.id, {
-        ctdi100: +(cvol*1.18+noise()).toFixed(2), ctdi_w: +(cvol*1.03+noise()).toFixed(2),
-        ctdi_vol: cvol, ctdi_vol_tc: cvtc,
-      });
+      for (const statId of statIds)
+        await saveMeas(statId, 'stato_lin_mas', r.id, {
+          ctdi100: +(cvol*1.18+noise()).toFixed(2), ctdi_w: +(cvol*1.03+noise()).toFixed(2),
+          ctdi_vol: cvol, ctdi_vol_tc: cvtc,
+        });
     }
 
     // stato_var_kv
@@ -2994,10 +3241,11 @@ async function seedDemoData() {
       const b    = baseCtdi[kv];
       const cvol = +(b * 0.72 + noise()).toFixed(2);
       const cvtc = +(cvol + noise() * 0.3).toFixed(2);
-      await saveMeas(statId, 'stato_var_kv', `kv_${kv}`, {
-        ctdi100: +(b+noise()).toFixed(2), ctdi_w: +(b*0.72+noise()).toFixed(2),
-        ctdi_vol: cvol, ctdi_vol_tc: cvtc,
-      });
+      for (const statId of statIds)
+        await saveMeas(statId, 'stato_var_kv', `kv_${kv}`, {
+          ctdi100: +(b+noise()).toFixed(2), ctdi_w: +(b*0.72+noise()).toFixed(2),
+          ctdi_vol: cvol, ctdi_vol_tc: cvtc,
+        });
     }
 
     // stato_coll_pitch
@@ -3007,19 +3255,21 @@ async function seedDemoData() {
       { id:'coll40_pit042', cvol: 23.4, cvtc: 23.0 },
     ];
     for (const r of cpRows)
-      await saveMeas(statId, 'stato_coll_pitch', r.id, {
-        ctdi100: +(r.cvol*1.18+noise()).toFixed(2), ctdi_w: +(r.cvol*1.03+noise()).toFixed(2),
-        ctdi_vol: r.cvol, ctdi_vol_tc: r.cvtc,
-      });
+      for (const statId of statIds)
+        await saveMeas(statId, 'stato_coll_pitch', r.id, {
+          ctdi100: +(r.cvol*1.18+noise()).toFixed(2), ctdi_w: +(r.cvol*1.03+noise()).toFixed(2),
+          ctdi_vol: r.cvol, ctdi_vol_tc: r.cvtc,
+        });
 
     // stato_body
     for (const kv of [80,100,120,140]) {
       const cvol = +(baseCtdi[kv] * 0.56 + noise()).toFixed(2);
       const cvtc = +(cvol + noise() * 0.3).toFixed(2);
-      await saveMeas(statId, 'stato_body', `body_kv${kv}`, {
-        ctdi100: +(cvol*1.18+noise()).toFixed(2), ctdi_w: +(cvol*1.03+noise()).toFixed(2),
-        ctdi_vol: cvol, ctdi_vol_tc: cvtc,
-      });
+      for (const statId of statIds)
+        await saveMeas(statId, 'stato_body', `body_kv${kv}`, {
+          ctdi100: +(cvol*1.18+noise()).toFixed(2), ctdi_w: +(cvol*1.03+noise()).toFixed(2),
+          ctdi_vol: cvol, ctdi_vol_tc: cvtc,
+        });
     }
 
     // ── Segna i controlli come completati ──
@@ -3409,7 +3659,7 @@ function _deltaTable(rows) {
 
 // ── TAB: Riproducibilità ───────────────────────────────────────────────
 function tabRpt_Riproducibilita() {
-  if(S.controlType==='stato'){
+  if(usesStatoProtocol(S.controlType)){
     const ids=['st_r1','st_r2','st_r3'];
     const vals=ids.map(id=>_cv('stato_riprod',id,'ctdi_vol'));
     const tc  =ids.map(id=>_cv('stato_riprod',id,'ctdi_vol_tc'));
@@ -3428,7 +3678,7 @@ function tabRpt_Riproducibilita() {
     const bdg=`<div style="margin-bottom:8px">${cvBadge(cv)}${_deltaBadge(vals[0],tc[0])}</div>`;
     return bdg+chart;
   }
-  if(S.controlType==='costanza'){
+  if(usesSemestraleProtocol(S.controlType)){
     const ids=['rip_1','rip_2','rip_3'];
     const vals=ids.map(id=>_cv('riprod_ctdi',id,'dose_air'));
     const pres=vals.filter(v=>v!=null); if(!pres.length) return '';
@@ -3447,7 +3697,7 @@ function tabRpt_Riproducibilita() {
 
 // ── TAB: Linearità mAs ────────────────────────────────────────────────
 function tabRpt_LinearitaMas() {
-  if(S.controlType!=='stato') return '';
+  if(!usesStatoProtocol(S.controlType)) return '';
   const rows=[{id:'mas_50',mas:50},{id:'mas_100',mas:100},
               {id:'mas_200',mas:200},{id:'mas_300',mas:300}];
   const pts=rows.map(r=>({
@@ -3484,7 +3734,7 @@ function tabRpt_LinearitaMas() {
 function tabRpt_VariazioneKv() {
   const KVS=[80,100,120,140];
 
-  if(S.controlType==='stato'){
+  if(usesStatoProtocol(S.controlType)){
     const hv=KVS.map(kv=>_cv('stato_var_kv',`kv_${kv}`,'ctdi_vol'));
     const ht=KVS.map(kv=>_cv('stato_var_kv',`kv_${kv}`,'ctdi_vol_tc'));
     const bv=KVS.map(kv=>_cv('stato_body',`body_kv${kv}`,'ctdi_vol'));
@@ -3521,7 +3771,7 @@ function tabRpt_VariazioneKv() {
     return bdg+chart+table;
   }
 
-  if(S.controlType==='costanza'){
+  if(usesSemestraleProtocol(S.controlType)){
     const av =KVS.map(kv=>_cv('var_kv',`vkv_${kv}`,'ctdi100'));
     const fv =KVS.map(kv=>_cv('var_kv',`vkv_${kv}`,'ctdi100_ph'));
     const tc =KVS.map(kv=>_cv('var_kv',`vkv_${kv}`,'ctdi_vol_tc'));
@@ -3566,7 +3816,7 @@ function tabRpt_VariazioneKv() {
 
 // ── TAB: Coll./Pitch/Rotazione (stato) ────────────────────────────────
 function tabRpt_CollimazionePitch() {
-  if(S.controlType!=='stato') return '';
+  if(!usesStatoProtocol(S.controlType)) return '';
   const rows=[
     {sec:'stato_coll_pitch',id:'coll_40',        label:'Coll 40mm / Pitch 1'},
     {sec:'stato_coll_pitch',id:'pitch_042',       label:'Coll 10mm / Pitch 0.42'},
@@ -3702,14 +3952,14 @@ function renderReportCharts() {
 
   // Definizione tab per tipo controllo
   let tabsDef=[];
-  if(S.controlType==='stato'){
+  if(usesStatoProtocol(S.controlType)){
     tabsDef=[
       {id:'rip', label:'🔄 Riproducibilità',  fn:tabRpt_Riproducibilita},
       {id:'mas', label:'📈 Linearità mAs',     fn:tabRpt_LinearitaMas},
       {id:'kv',  label:'📐 Variazione kVp',    fn:tabRpt_VariazioneKv},
       {id:'cp',  label:'📏 Coll./Pitch/Rot.',  fn:tabRpt_CollimazionePitch},
     ];
-  } else if(S.controlType==='costanza'){
+  } else if(usesSemestraleProtocol(S.controlType)){
     tabsDef=[
       {id:'rip', label:'🔄 Riproducibilità',  fn:tabRpt_Riproducibilita},
       {id:'kv',  label:'📐 Variazione kVp',   fn:tabRpt_VariazioneKv},
