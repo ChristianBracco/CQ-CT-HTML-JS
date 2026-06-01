@@ -116,6 +116,18 @@ Bun.serve({
         headers: { "Content-Type": "text/html; charset=utf-8" },
       });
     }
+    // Serve static files from Icone folder
+    if (path.startsWith("/Icone/")) {
+      const filePath = join(__dir, decodeURIComponent(path.slice(1)));
+      const file = Bun.file(filePath);
+      if (await file.exists()) {
+        const ext = path.split('.').pop().toLowerCase();
+        const mimeTypes = { png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', ico:'image/x-icon', svg:'image/svg+xml', gif:'image/gif' };
+        return new Response(file, {
+          headers: { "Content-Type": mimeTypes[ext] || "application/octet-stream", "Cache-Control": "public, max-age=86400" },
+        });
+      }
+    }
     if (!path.startsWith("/api/")) return new Response("Not Found", { status: 404 });
 
     try {
@@ -315,8 +327,8 @@ Bun.serve({
         // ── v1 legacy: payload { session: {...} } dal mobile ─────
         if (body.session) {
           const sess    = body.session;
-          const typeMap = { accettazione:"accettazione", semestrale:"costanza", annuale:"stato",
-                            costanza:"costanza", stato:"stato" };
+          const typeMap = { accettazione:"accettazione", costanza:"costanza",
+                            semestrale:"semestrale", annuale:"annuale", stato:"stato" };
           const rType   = typeMap[sess.type] || sess.type;
 
           // Match macchina per nome+hospital (non per ID)
@@ -375,11 +387,13 @@ Bun.serve({
         const { machines=[], controls=[], measurements=[], signatures=[], exposure_params=[] } = body;
         if (!controls.length) return json({ error:"Nessun controllo nel payload" }, 400);
 
+        console.log(`📥 Import v2 payload: ${machines.length} macchine, ${controls.length} controlli, ${measurements.length} misure, ${signatures.length} firme`);
+
         const report = {
           machines:        { created:0, matched:0, detail:[] },
           controls:        { created:0, updated:0, detail:[] },
-          measurements:    { upserted:0 },
-          signatures:      { upserted:0 },
+          measurements:    { upserted:0, in_payload: measurements.length },
+          signatures:      { upserted:0, in_payload: signatures.length },
           exposure_params: { upserted:0 },
         };
         const machineIdMap = {};  // old_id → resolved_id
@@ -450,9 +464,10 @@ Bun.serve({
           }
 
           // 3. Misure – upsert sempre (last-write-wins)
+          let measSkipped = 0;
           for (const meas of measurements) {
             const rCid = controlIdMap[meas.control_id];
-            if (!rCid) continue;
+            if (!rCid) { measSkipped++; continue; }
             report.measurements.upserted++;
             if (!dryRun)
               db.run(`INSERT INTO measurements(control_id,section_id,row_id,values_json,accepted,accepted_at)
@@ -461,6 +476,8 @@ Bun.serve({
                         values_json=excluded.values_json,accepted=excluded.accepted,accepted_at=excluded.accepted_at`,
                 [rCid, meas.section_id, meas.row_id, meas.values_json, meas.accepted, meas.accepted_at||""]);
           }
+          if (measSkipped) console.log(`⚠️  ${measSkipped} misure skippate (control_id non mappato). controlIdMap keys:`, Object.keys(controlIdMap));
+          report.measurements.skipped = measSkipped;
 
           // 4. Firme
           for (const sig of signatures) {

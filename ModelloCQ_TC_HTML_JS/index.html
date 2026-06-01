@@ -618,6 +618,8 @@ button { cursor: pointer; }
   <button class="btn btn-ghost btn-sm no-print" onclick="toggleTheme()" id="btn-theme" title="Cambia tema">🌙</button>
   <button class="btn btn-ghost btn-sm no-print" onclick="openSettings()" title="Impostazioni soglie">⚙</button>
   <button class="btn btn-ghost btn-sm no-print" onclick="openImportExport()" title="Import / Export dati">⇅ Sync</button>
+  <button class="btn btn-primary btn-sm no-print" id="btn-save-all" onclick="saveAllData()" title="Salva tutti i dati nel database" style="display:none">💾 Salva</button>
+  <button class="btn btn-ghost btn-sm no-print" id="btn-ctdi-calc" onclick="openCtdiCalc()" title="Calcolatore CTDIvol / CTDIw" style="display:none"><svg width="16" height="16" viewBox="0 0 20 20" style="vertical-align:middle;margin-right:3px"><circle cx="10" cy="10" r="9" fill="none" stroke="var(--muted)" stroke-width="1.2"/><circle cx="10" cy="3" r="2" fill="#4d9fff"/><circle cx="17" cy="10" r="2" fill="#4d9fff"/><circle cx="10" cy="17" r="2" fill="#4d9fff"/><circle cx="3" cy="10" r="2" fill="#4d9fff"/><circle cx="10" cy="10" r="2.5" fill="#34c264"/></svg> CTDI</button>
   <button class="btn btn-ghost btn-sm no-print" onclick="seedDemoData()" title="Popola dati dimostrativi" id="btn-demo">🎲 Demo</button>
   <button class="btn btn-ghost btn-sm no-print" id="btn-report" onclick="showReport()" style="display:none">📄 Report</button>
 </header>
@@ -781,6 +783,153 @@ button { cursor: pointer; }
 </div>
 
 <!-- ════════════════════════════════════════════
+     MODAL CALCOLATORE CTDIvol / CTDIw
+════════════════════════════════════════════ -->
+<div class="modal-bg" id="modal-ctdi-calc">
+  <div class="modal" style="max-width:520px;width:100%">
+    <h3 style="display:flex;align-items:center;gap:8px">
+      <svg width="22" height="22" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="none" stroke="var(--muted)" stroke-width="1.2"/><circle cx="10" cy="3" r="2" fill="#4d9fff"/><circle cx="17" cy="10" r="2" fill="#4d9fff"/><circle cx="10" cy="17" r="2" fill="#4d9fff"/><circle cx="3" cy="10" r="2" fill="#4d9fff"/><circle cx="10" cy="10" r="2.5" fill="#34c264"/></svg>
+      Calcolatore CTDI<sub>vol</sub>
+    </h3>
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:14px">
+      <button class="sec-tab active" id="ctdi-tab-single" onclick="ctdiCalcTab('single')">Singola Energia</button>
+      <button class="sec-tab" id="ctdi-tab-dual" onclick="ctdiCalcTab('dual')">Dual Energy</button>
+    </div>
+
+    <!-- ═══ SINGOLA ENERGIA ═══ -->
+    <div id="ctdi-panel-single">
+      <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+        <div class="field">
+          <label>Fantoccio</label>
+          <select id="ctdi-phantom" onchange="ctdiCalcUpdate()">
+            <option value="head">HEAD (16 cm)</option>
+            <option value="body">BODY (32 cm)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Pitch</label>
+          <input id="ctdi-pitch" type="number" step="0.001" min="0.1" value="1" oninput="ctdiCalcUpdate()">
+        </div>
+        <div class="field">
+          <label>nT (mm)</label>
+          <input id="ctdi-nt" type="number" step="0.1" min="0.1" placeholder="opz." oninput="ctdiCalcUpdate()">
+        </div>
+      </div>
+
+      <div style="font-size:.72rem;font-weight:600;color:var(--muted);margin-bottom:8px">CTDI₁₀₀ misurati (mGy) — periferia: almeno 1 valore</div>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div class="field full">
+          <label>Centro</label>
+          <input id="ctdi-c" type="number" step="0.01" placeholder="—" oninput="ctdiCalcUpdate()">
+        </div>
+        <div class="field">
+          <label>Ore 12</label>
+          <input id="ctdi-p12" type="number" step="0.01" placeholder="—" oninput="ctdiCalcUpdate()">
+        </div>
+        <div class="field">
+          <label>Ore 3</label>
+          <input id="ctdi-p3" type="number" step="0.01" placeholder="—" oninput="ctdiCalcUpdate()">
+        </div>
+        <div class="field">
+          <label>Ore 6</label>
+          <input id="ctdi-p6" type="number" step="0.01" placeholder="—" oninput="ctdiCalcUpdate()">
+        </div>
+        <div class="field">
+          <label>Ore 9</label>
+          <input id="ctdi-p9" type="number" step="0.01" placeholder="—" oninput="ctdiCalcUpdate()">
+        </div>
+      </div>
+
+      <!-- Risultati -->
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">
+          <div>
+            <div style="font-size:.7rem;color:var(--muted);font-weight:600">Periferia media</div>
+            <div id="ctdi-res-perif" style="font-family:var(--mono);font-size:1.1rem;font-weight:700;margin-top:2px">—</div>
+          </div>
+          <div>
+            <div style="font-size:.7rem;color:var(--muted);font-weight:600">CTDIw</div>
+            <div id="ctdi-res-w" style="font-family:var(--mono);font-size:1.1rem;font-weight:700;color:var(--accent);margin-top:2px">—</div>
+          </div>
+          <div>
+            <div style="font-size:.7rem;color:var(--muted);font-weight:600">CTDIvol</div>
+            <div id="ctdi-res-vol" style="font-family:var(--mono);font-size:1.1rem;font-weight:700;color:var(--ok);margin-top:2px">—</div>
+          </div>
+        </div>
+        <div id="ctdi-formula" style="font-size:.7rem;color:var(--muted);margin-top:10px;text-align:center;font-family:var(--mono);line-height:1.5"></div>
+      </div>
+    </div>
+
+    <!-- ═══ DUAL ENERGY ═══ -->
+    <div id="ctdi-panel-dual" style="display:none">
+      <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+        <div class="field">
+          <label>Fantoccio</label>
+          <select id="ctdi-de-phantom" onchange="ctdiCalcUpdateDE()">
+            <option value="head">HEAD (16 cm)</option>
+            <option value="body">BODY (32 cm)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Pitch</label>
+          <input id="ctdi-de-pitch" type="number" step="0.001" min="0.1" value="1" oninput="ctdiCalcUpdateDE()">
+        </div>
+        <div class="field">
+          <label>nT (mm)</label>
+          <input id="ctdi-de-nt" type="number" step="0.1" min="0.1" placeholder="opz." oninput="ctdiCalcUpdateDE()">
+        </div>
+      </div>
+
+      <!-- Energia BASSA -->
+      <div style="border:1px solid var(--accent);border-radius:var(--r);padding:12px;margin-bottom:10px;background:rgba(77,159,255,.04)">
+        <div style="font-size:.78rem;font-weight:700;color:var(--accent);margin-bottom:10px">⚡ Energia BASSA (1° picco)</div>
+        <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field full"><label>Centro</label><input id="ctdi-de-lo-c" type="number" step="0.01" placeholder="—" oninput="ctdiCalcUpdateDE()"></div>
+          <div class="field"><label>Ore 12</label><input id="ctdi-de-lo-p12" type="number" step="0.01" placeholder="—" oninput="ctdiCalcUpdateDE()"></div>
+          <div class="field"><label>Ore 3</label><input id="ctdi-de-lo-p3" type="number" step="0.01" placeholder="—" oninput="ctdiCalcUpdateDE()"></div>
+          <div class="field"><label>Ore 6</label><input id="ctdi-de-lo-p6" type="number" step="0.01" placeholder="—" oninput="ctdiCalcUpdateDE()"></div>
+          <div class="field"><label>Ore 9</label><input id="ctdi-de-lo-p9" type="number" step="0.01" placeholder="—" oninput="ctdiCalcUpdateDE()"></div>
+        </div>
+        <div style="display:flex;justify-content:space-around;text-align:center;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">
+          <div><div style="font-size:.68rem;color:var(--muted)">CTDIw</div><div id="ctdi-de-lo-w" style="font-family:var(--mono);font-size:1rem;font-weight:700;color:var(--accent)">—</div></div>
+          <div><div style="font-size:.68rem;color:var(--muted)">CTDIvol</div><div id="ctdi-de-lo-vol" style="font-family:var(--mono);font-size:1rem;font-weight:700;color:var(--ok)">—</div></div>
+        </div>
+      </div>
+
+      <!-- Energia ALTA -->
+      <div style="border:1px solid var(--warn);border-radius:var(--r);padding:12px;margin-bottom:12px;background:rgba(240,165,0,.04)">
+        <div style="font-size:.78rem;font-weight:700;color:var(--warn);margin-bottom:10px">⚡ Energia ALTA (2° picco – range spostato)</div>
+        <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field full"><label>Centro</label><input id="ctdi-de-hi-c" type="number" step="0.01" placeholder="—" oninput="ctdiCalcUpdateDE()"></div>
+          <div class="field"><label>Ore 12</label><input id="ctdi-de-hi-p12" type="number" step="0.01" placeholder="—" oninput="ctdiCalcUpdateDE()"></div>
+          <div class="field"><label>Ore 3</label><input id="ctdi-de-hi-p3" type="number" step="0.01" placeholder="—" oninput="ctdiCalcUpdateDE()"></div>
+          <div class="field"><label>Ore 6</label><input id="ctdi-de-hi-p6" type="number" step="0.01" placeholder="—" oninput="ctdiCalcUpdateDE()"></div>
+          <div class="field"><label>Ore 9</label><input id="ctdi-de-hi-p9" type="number" step="0.01" placeholder="—" oninput="ctdiCalcUpdateDE()"></div>
+        </div>
+        <div style="display:flex;justify-content:space-around;text-align:center;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">
+          <div><div style="font-size:.68rem;color:var(--muted)">CTDIw</div><div id="ctdi-de-hi-w" style="font-family:var(--mono);font-size:1rem;font-weight:700;color:var(--accent)">—</div></div>
+          <div><div style="font-size:.68rem;color:var(--muted)">CTDIvol</div><div id="ctdi-de-hi-vol" style="font-family:var(--mono);font-size:1rem;font-weight:700;color:var(--ok)">—</div></div>
+        </div>
+      </div>
+
+      <!-- Risultato SOMMA -->
+      <div style="background:var(--bg3);border:2px solid var(--ok);border-radius:var(--r);padding:14px;text-align:center">
+        <div style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">CTDIvol TOTALE (Low + High)</div>
+        <div id="ctdi-de-total-vol" style="font-family:var(--mono);font-size:1.4rem;font-weight:700;color:var(--ok)">—</div>
+        <div id="ctdi-de-formula" style="font-size:.72rem;color:var(--muted);margin-top:6px;font-family:var(--mono)"></div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-ctdi-calc')">Chiudi</button>
+      <button class="btn btn-primary" id="ctdi-btn-apply" onclick="ctdiCalcApply()" disabled>📋 Applica alla card</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
      MODAL IMPORT / EXPORT
 ════════════════════════════════════════════ -->
 <div class="modal-bg" id="modal-sync">
@@ -933,6 +1082,12 @@ const DOSE_ARIA_FIELDS = [
 const DOSE_ARIA_SP_FIELDS = [
   { id:'ctdi100',     label:'CTDI₁₀₀',  unit:'mGy', type:'number' },
   { id:'ctdi_vol_tc', label:'CTDIvol TC (display)', unit:'mGy', type:'number' },
+];
+const DUAL_ENERGY_FIELDS = [
+  { id:'ctdi_vol',     label:'CTDIvol mis.',        unit:'mGy',   type:'number', isDeltaA: true },
+  { id:'ctdi_vol_tc',  label:'CTDIvol TC display',  unit:'mGy',   type:'number', isDeltaB: true },
+  { id:'hu_acqua',     label:'HU acqua',            unit:'HU',    type:'number' },
+  { id:'iodine_mgml',  label:'Iodio mis.',          unit:'mg/ml', type:'number' },
 ];
 
 // Default rows builder helpers
@@ -1092,6 +1247,17 @@ const QC_DEF = {
         { id:'ctdi_vol_tc', label:'CTDIvol TC display',  unit:'mGy', type:'number', isDeltaB:true },
       ],
     },
+    {
+      id:'dual_energy_costanza', tab:'Dual Energy',
+      title:'Dual Energy – ripetibilità protocollo',
+      desc:'Tre acquisizioni ripetute con protocollo Dual Energy di riferimento. Registrare dose, HU acqua e concentrazione iodio misurata.',
+      paramFields:[P('misura','Misura #'),P('de_mode','Modalità'),P('kV_low','kV low'),P('kV_high','kV high'),P('coll_mm','Coll.'),P('pitch','Pitch'),P('rot_s','Rot.(s)'),P('fov','FOV')],
+      defaultRows:[1,2,3].map(n => ({
+        id:`de_r${n}`,
+        params:[P('misura',n),P('de_mode','Dual Energy'),P('kV_low',80),P('kV_high',140),P('coll_mm',10),P('pitch',1),P('rot_s',1),P('fov','head')]
+      })),
+      fields: DUAL_ENERGY_FIELDS,
+    },
   ],
 
   // ── PROTOCOLLO STATO / ANNUALE ─────────────────────────────────────────
@@ -1177,6 +1343,19 @@ const QC_DEF = {
         {id:'body_kv140', params:[P('kV',140),P('mA',100),P('coll_mm',10),P('pitch',0.969),P('rot_s',1)]},
       ],
       fields: CTDI_FIELDS,
+    },
+    {
+      id:'stato_dual_energy', tab:'Dual Energy',
+      title:'Dual Energy – verifica protocolli HEAD/BODY',
+      desc:'Acquisizioni Dual Energy di riferimento per HEAD e BODY. Registrare dose, HU acqua e concentrazione iodio misurata.',
+      paramFields:[P('protocollo','Protocollo'),P('de_mode','Modalità'),P('kV_low','kV low'),P('kV_high','kV high'),P('mA','mA'),P('coll_mm','Coll.'),P('pitch','Pitch'),P('rot_s','Rot.(s)'),P('fov','FOV')],
+      defaultRows:[
+        {id:'de_head_80_140',  params:[P('protocollo','HEAD 80/140'), P('de_mode','Dual Energy'),P('kV_low',80), P('kV_high',140),P('mA',100),P('coll_mm',10),P('pitch',1),    P('rot_s',1),P('fov','head')]},
+        {id:'de_head_100_140', params:[P('protocollo','HEAD 100/140'),P('de_mode','Dual Energy'),P('kV_low',100),P('kV_high',140),P('mA',100),P('coll_mm',10),P('pitch',1),    P('rot_s',1),P('fov','head')]},
+        {id:'de_body_80_140',  params:[P('protocollo','BODY 80/140'), P('de_mode','Dual Energy'),P('kV_low',80), P('kV_high',140),P('mA',300),P('coll_mm',10),P('pitch',0.969),P('rot_s',1),P('fov','large body')]},
+        {id:'de_body_100_140', params:[P('protocollo','BODY 100/140'),P('de_mode','Dual Energy'),P('kV_low',100),P('kV_high',140),P('mA',300),P('coll_mm',10),P('pitch',0.969),P('rot_s',1),P('fov','large body')]},
+      ],
+      fields: DUAL_ENERGY_FIELDS,
     },
   ],
 
@@ -1565,6 +1744,7 @@ function propagateMeanRules() {
 // STATE
 // ═══════════════════════════════════════════════════════════════════════
 const S = {
+  machines: [],
   machine: null,
   controlType: null,
   control: null,
@@ -1611,6 +1791,10 @@ function showView(name) {
   document.getElementById(`view-${name}`).classList.add('active');
   document.getElementById('btn-report').style.display =
     (name === 'measurements' || name === 'report') ? '' : 'none';
+  document.getElementById('btn-save-all').style.display =
+    (name === 'measurements' || name === 'report') ? '' : 'none';
+  document.getElementById('btn-ctdi-calc').style.display =
+    (name === 'measurements' || name === 'report') ? '' : 'none';
   if (window.innerWidth <= 768) closeSidebar();
 }
 
@@ -1630,6 +1814,7 @@ function updateBreadcrumb() {
 // ═══════════════════════════════════════════════════════════════════════
 async function loadMachines() {
   const machines = await api.get('/api/machines');
+  S.machines = machines;
   renderSidebarMachines(machines);
   renderMachinesGrid(machines);
 }
@@ -2001,8 +2186,16 @@ function renderCard(sec, row) {
   const deltaHtml = hasDelta ? renderDeltaIndicator(sec, vals) : '';
 
   // ───────── FOOTER ─────────
+  const hasCTDI = sec.fields.some(f => f.id === 'ctdi_vol' || f.id === 'ctdi_w');
+  const ctdiBtn = hasCTDI ? `
+        <button class="btn btn-ghost btn-xs"
+                onclick="openCtdiCalc('${sec.id}','${row.id}')"
+                title="Calcolatore CTDIvol">
+          <svg width="14" height="14" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="none" stroke="var(--muted)" stroke-width="1.5"/><circle cx="10" cy="3" r="2" fill="#4d9fff"/><circle cx="17" cy="10" r="2" fill="#4d9fff"/><circle cx="10" cy="17" r="2" fill="#4d9fff"/><circle cx="3" cy="10" r="2" fill="#4d9fff"/><circle cx="10" cy="10" r="2.5" fill="#34c264"/></svg>
+        </button>` : '';
   const footerHtml = !isAcc ? `
       <div class="cfoot no-print">
+        ${ctdiBtn}
         <button class="btn btn-ghost btn-xs"
                 onclick="repeatCard('${sec.id}','${row.id}')">
           ↺ Ripeti
@@ -2081,10 +2274,104 @@ function debounce(fn, delay = 400) {
 }
 
 const saveMeasurementDebounced = debounce((el) => {
+  const sec = el.dataset.sec;
+  const row = el.dataset.row;
+  const fid = el.dataset.fid;
   const val = normalizeNumberString(el.value);
-  el.value = val;               // mantiene il focus
-  saveMeasurementValueOnly(el); // salva SOLO il valore
+  el.value = val;
+  ensureCache(sec, row);
+  S.cache[`${sec}_${row}`].values[fid] = val;
+  saveMeasurement(sec, row);
 }, 400);
+
+// ═══════════════════════════════════════════════════════════════════════
+// SAVE ALL – salva tutte le misure in cache nel DB
+// ═══════════════════════════════════════════════════════════════════════
+async function saveAllData() {
+  if (!S.control) { alert('Nessun controllo attivo da salvare.'); return; }
+
+  const btn = document.getElementById('btn-save-all');
+  const origText = btn.textContent;
+  btn.textContent = '⏳ Salvataggio…';
+  btn.disabled = true;
+
+  try {
+    const promises = [];
+
+    // 1. Salva tutte le misure iterando sulle sezioni definite
+    const defs = QC_DEF[S.controlType] || [];
+    defs.forEach(sec => {
+      const rows = getSectionRows(sec);
+      rows.forEach(row => {
+        const key = `${sec.id}_${row.id}`;
+        const cache = S.cache[key];
+        if (!cache || !cache.values || Object.keys(cache.values).length === 0) return;
+        promises.push(
+          api.post('/api/measurements', {
+            control_id: S.control.id,
+            section_id: sec.id,
+            row_id: row.id,
+            values: cache.values,
+            accepted: cache.accepted || false,
+            accepted_at: cache.accepted_at || '',
+          })
+        );
+      });
+    });
+
+    // 2. Salva note e conclusioni se presenti nel report
+    const notes = document.getElementById('rpt-notes')?.value;
+    if (notes !== undefined && notes !== null) {
+      promises.push(api.put(`/api/controls/${S.control.id}`, { notes }));
+    }
+
+    const q = document.querySelector('[name=rq_qual]:checked')?.value || '';
+    const i = document.querySelector('[name=rq_idon]:checked')?.value || '';
+    const mt = document.querySelector('[name=rq_maint]:checked')?.value || '';
+    if (q || i || mt) {
+      promises.push(api.put(`/api/controls/${S.control.id}`, {
+        conclusion_quality: q,
+        conclusion_idoneita: i,
+        conclusion_maint: mt,
+      }));
+    }
+
+    // 3. Salva firme se presenti
+    const physicist = document.getElementById('sign-physicist')?.value;
+    const responsible = document.getElementById('sign-responsible')?.value;
+    if (physicist !== undefined || responsible !== undefined) {
+      promises.push(api.put('/api/signatures', {
+        control_id: S.control.id,
+        physicist: physicist || '',
+        responsible: responsible || '',
+      }));
+    }
+
+    await Promise.all(promises);
+
+    btn.textContent = '✓ Salvato!';
+    btn.style.background = 'var(--ok)';
+    btn.style.borderColor = 'var(--ok)';
+    setTimeout(() => {
+      btn.textContent = origText;
+      btn.disabled = false;
+      btn.style.background = '';
+      btn.style.borderColor = '';
+    }, 2000);
+
+  } catch (e) {
+    btn.textContent = '❌ Errore';
+    btn.style.background = 'var(--fail)';
+    btn.style.borderColor = 'var(--fail)';
+    console.error('saveAllData error:', e);
+    setTimeout(() => {
+      btn.textContent = origText;
+      btn.disabled = false;
+      btn.style.background = '';
+      btn.style.borderColor = '';
+    }, 3000);
+  }
+}
 
 
 
@@ -2888,6 +3175,170 @@ document.querySelectorAll('.modal-bg').forEach(bg => bg.addEventListener('click'
   if (e.target === bg) bg.classList.remove('open');
 }));
 
+// ═══════════════════════════════════════════════════════════════════════
+// CTDI CALCULATOR
+// ═══════════════════════════════════════════════════════════════════════
+let _ctdiCalcTarget = null; // { secId, rowId } – card da cui è stato aperto
+
+function openCtdiCalc(secId, rowId) {
+  _ctdiCalcTarget = secId && rowId ? { secId, rowId } : null;
+  // Reset inputs
+  ['ctdi-c','ctdi-p12','ctdi-p9','ctdi-p6','ctdi-p3'].forEach(id => { document.getElementById(id).value = ''; });
+  ['ctdi-de-lo-c','ctdi-de-lo-p12','ctdi-de-lo-p9','ctdi-de-lo-p6','ctdi-de-lo-p3',
+   'ctdi-de-hi-c','ctdi-de-hi-p12','ctdi-de-hi-p9','ctdi-de-hi-p6','ctdi-de-hi-p3'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('ctdi-pitch').value = '1';
+  document.getElementById('ctdi-de-pitch').value = '1';
+  document.getElementById('ctdi-nt').value = '';
+  document.getElementById('ctdi-de-nt').value = '';
+  ctdiCalcTab('single');
+  ctdiCalcUpdate();
+  ctdiCalcUpdateDE();
+  document.getElementById('ctdi-btn-apply').disabled = !_ctdiCalcTarget;
+  openModal('modal-ctdi-calc');
+}
+
+function ctdiCalcTab(tab) {
+  document.getElementById('ctdi-panel-single').style.display = tab === 'single' ? '' : 'none';
+  document.getElementById('ctdi-panel-dual').style.display   = tab === 'dual'   ? '' : 'none';
+  document.getElementById('ctdi-tab-single').className = `sec-tab ${tab==='single'?'active':''}`;
+  document.getElementById('ctdi-tab-dual').className   = `sec-tab ${tab==='dual'?'active':''}`;
+}
+
+function _computeCtdi(centro, perifVals, pitch) {
+  const c = parseFloat(centro);
+  const pVals = perifVals.map(v => parseFloat(v)).filter(v => !isNaN(v));
+  if (isNaN(c) || pVals.length === 0) return null;
+  const pMean = pVals.reduce((a, b) => a + b, 0) / pVals.length;
+  const ctdiW = (1/3) * c + (2/3) * pMean;
+  const p = parseFloat(pitch);
+  const ctdiVol = (p && p > 0) ? ctdiW / p : ctdiW;
+  return { perif: pMean, ctdiW, ctdiVol, nPerif: pVals.length };
+}
+
+function ctdiCalcUpdate() {
+  const c = document.getElementById('ctdi-c').value;
+  const pVals = ['ctdi-p12','ctdi-p9','ctdi-p6','ctdi-p3'].map(id => document.getElementById(id).value);
+  const pitch = document.getElementById('ctdi-pitch').value;
+
+  const res = _computeCtdi(c, pVals, pitch);
+  if (!res) {
+    document.getElementById('ctdi-res-perif').textContent = '—';
+    document.getElementById('ctdi-res-w').textContent = '—';
+    document.getElementById('ctdi-res-vol').textContent = '—';
+    document.getElementById('ctdi-formula').textContent = '';
+    return;
+  }
+
+  document.getElementById('ctdi-res-perif').textContent = res.perif.toFixed(2) + ' mGy';
+  document.getElementById('ctdi-res-w').textContent = res.ctdiW.toFixed(2) + ' mGy';
+  document.getElementById('ctdi-res-vol').textContent = res.ctdiVol.toFixed(2) + ' mGy';
+
+  const pLabel = res.nPerif === 1 ? '1 mis. periferica' : `media ${res.nPerif} mis. periferiche`;
+  const pVal = parseFloat(pitch) || 1;
+  document.getElementById('ctdi-formula').innerHTML =
+    `CTDIw = ⅓×${parseFloat(c).toFixed(2)} + ⅔×${res.perif.toFixed(2)} (${pLabel}) = ${res.ctdiW.toFixed(2)} mGy` +
+    `<br>CTDIvol = ${res.ctdiW.toFixed(2)} / ${pVal.toFixed(3)} = <strong>${res.ctdiVol.toFixed(2)} mGy</strong>`;
+}
+
+function ctdiCalcUpdateDE() {
+  const pitch = document.getElementById('ctdi-de-pitch').value;
+
+  // Low energy
+  const loC = document.getElementById('ctdi-de-lo-c').value;
+  const loP = ['ctdi-de-lo-p12','ctdi-de-lo-p9','ctdi-de-lo-p6','ctdi-de-lo-p3'].map(id => document.getElementById(id).value);
+  const loRes = _computeCtdi(loC, loP, pitch);
+
+  if (loRes) {
+    document.getElementById('ctdi-de-lo-w').textContent = loRes.ctdiW.toFixed(2);
+    document.getElementById('ctdi-de-lo-vol').textContent = loRes.ctdiVol.toFixed(2);
+  } else {
+    document.getElementById('ctdi-de-lo-w').textContent = '—';
+    document.getElementById('ctdi-de-lo-vol').textContent = '—';
+  }
+
+  // High energy
+  const hiC = document.getElementById('ctdi-de-hi-c').value;
+  const hiP = ['ctdi-de-hi-p12','ctdi-de-hi-p9','ctdi-de-hi-p6','ctdi-de-hi-p3'].map(id => document.getElementById(id).value);
+  const hiRes = _computeCtdi(hiC, hiP, pitch);
+
+  if (hiRes) {
+    document.getElementById('ctdi-de-hi-w').textContent = hiRes.ctdiW.toFixed(2);
+    document.getElementById('ctdi-de-hi-vol').textContent = hiRes.ctdiVol.toFixed(2);
+  } else {
+    document.getElementById('ctdi-de-hi-w').textContent = '—';
+    document.getElementById('ctdi-de-hi-vol').textContent = '—';
+  }
+
+  // Total (sum)
+  const totalEl = document.getElementById('ctdi-de-total-vol');
+  const formulaEl = document.getElementById('ctdi-de-formula');
+  if (loRes && hiRes) {
+    const total = loRes.ctdiVol + hiRes.ctdiVol;
+    totalEl.textContent = total.toFixed(2) + ' mGy';
+    formulaEl.innerHTML = `${loRes.ctdiVol.toFixed(2)} (low) + ${hiRes.ctdiVol.toFixed(2)} (high) = <strong>${total.toFixed(2)}</strong> mGy`;
+  } else if (loRes) {
+    totalEl.textContent = loRes.ctdiVol.toFixed(2) + ' mGy (solo low)';
+    formulaEl.innerHTML = `Solo energia bassa disponibile`;
+  } else if (hiRes) {
+    totalEl.textContent = hiRes.ctdiVol.toFixed(2) + ' mGy (solo high)';
+    formulaEl.innerHTML = `Solo energia alta disponibile`;
+  } else {
+    totalEl.textContent = '—';
+    formulaEl.innerHTML = '';
+  }
+}
+
+function ctdiCalcApply() {
+  if (!_ctdiCalcTarget) return;
+  const { secId, rowId } = _ctdiCalcTarget;
+
+  // Determine which tab is active
+  const isDual = document.getElementById('ctdi-panel-dual').style.display !== 'none';
+
+  if (!isDual) {
+    // Single energy → apply to card
+    const c = document.getElementById('ctdi-c').value;
+    const pitch = document.getElementById('ctdi-pitch').value;
+    const pVals = ['ctdi-p12','ctdi-p9','ctdi-p6','ctdi-p3'].map(id => document.getElementById(id).value);
+    const res = _computeCtdi(c, pVals, pitch);
+    if (!res) { alert('Dati insufficienti per il calcolo.'); return; }
+
+    ensureCache(secId, rowId);
+    const cache = S.cache[`${secId}_${rowId}`];
+    cache.values['ctdi100'] = String(parseFloat(c).toFixed(2));
+    cache.values['ctdi_w'] = String(res.ctdiW.toFixed(2));
+    cache.values['ctdi_vol'] = String(res.ctdiVol.toFixed(2));
+    saveMeasurement(secId, rowId);
+    refreshCard(secId, rowId);
+  } else {
+    // Dual energy → registra la SOMMA dei CTDIvol (low + high)
+    const pitch = document.getElementById('ctdi-de-pitch').value;
+    const loC = document.getElementById('ctdi-de-lo-c').value;
+    const loP = ['ctdi-de-lo-p12','ctdi-de-lo-p9','ctdi-de-lo-p6','ctdi-de-lo-p3'].map(id => document.getElementById(id).value);
+    const loRes = _computeCtdi(loC, loP, pitch);
+
+    const hiC = document.getElementById('ctdi-de-hi-c').value;
+    const hiP = ['ctdi-de-hi-p12','ctdi-de-hi-p9','ctdi-de-hi-p6','ctdi-de-hi-p3'].map(id => document.getElementById(id).value);
+    const hiRes = _computeCtdi(hiC, hiP, pitch);
+
+    if (!loRes && !hiRes) { alert('Dati insufficienti per il calcolo.'); return; }
+
+    ensureCache(secId, rowId);
+    const cache = S.cache[`${secId}_${rowId}`];
+
+    // CTDIvol = somma delle due energie
+    const loVol = loRes ? loRes.ctdiVol : 0;
+    const hiVol = hiRes ? hiRes.ctdiVol : 0;
+    const totalVol = loVol + hiVol;
+    cache.values['ctdi_vol'] = String(totalVol.toFixed(2));
+
+    saveMeasurement(secId, rowId);
+    refreshCard(secId, rowId);
+  }
+
+  closeModal('modal-ctdi-calc');
+}
+
 function confirm2(title, body, okCb, cancelCb) {
   document.getElementById('mc-title').textContent = title;
   document.getElementById('mc-body').textContent  = body;
@@ -2946,10 +3397,9 @@ function openImportExport() {
   });
   // Preset: macchina corrente
   if (S.machine) sel.value = S.machine.id;
-  // Preset date: oggi
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('exp-date-from').value = today;
-  document.getElementById('exp-date-to').value   = today;
+  // Preset date: vuote (esporta tutto) — l'utente può restringere
+  document.getElementById('exp-date-from').value = '';
+  document.getElementById('exp-date-to').value   = '';
 
   syncTab('exp');
   document.getElementById('imp-preview').style.display = 'none';
@@ -3071,8 +3521,8 @@ async function doImport(preview) {
       ...r.machines.detail.map(d => `&nbsp;&nbsp;· ${d.name} → <em>${d.action}${d.id?' (id '+d.id+')':''}</em>`),
       `<strong>Controlli</strong>: ${r.controls.updated} aggiornati, ${r.controls.created} ${preview?'da creare':'creati'}`,
       ...r.controls.detail.map(d => `&nbsp;&nbsp;· ${d.date} ${d.type} → <em>${d.action}${d.id?' (id '+d.id+')':''}</em>`),
-      `<strong>Misure</strong>: ${r.measurements.upserted}`,
-      `<strong>Firme</strong>: ${r.signatures.upserted}`,
+      `<strong>Misure</strong>: ${r.measurements.upserted} importate (${r.measurements.in_payload || 0} nel file${r.measurements.skipped ? ', <span style="color:var(--fail)">' + r.measurements.skipped + ' skippate</span>' : ''})`,
+      `<strong>Firme</strong>: ${r.signatures.upserted} (${r.signatures.in_payload || 0} nel file)`,
     ];
     previewBox.innerHTML  = lines.join('<br>');
     previewBox.style.display = '';
@@ -3848,6 +4298,73 @@ function tabRpt_CollimazionePitch() {
   return chart+table;
 }
 
+// ── TAB: Dual Energy ─────────────────────────────────────────────────
+function tabRpt_DualEnergy() {
+  let secId = null;
+  let rows = [];
+  if(usesStatoProtocol(S.controlType)){
+    secId = 'stato_dual_energy';
+    rows = [
+      {id:'de_head_80_140',  label:'HEAD 80/140'},
+      {id:'de_head_100_140', label:'HEAD 100/140'},
+      {id:'de_body_80_140',  label:'BODY 80/140'},
+      {id:'de_body_100_140', label:'BODY 100/140'},
+    ];
+  } else if(usesSemestraleProtocol(S.controlType)){
+    secId = 'dual_energy_costanza';
+    rows = [
+      {id:'de_r1', label:'Mis.1'},
+      {id:'de_r2', label:'Mis.2'},
+      {id:'de_r3', label:'Mis.3'},
+    ];
+  } else {
+    return '';
+  }
+
+  const pts = rows.map(r => ({
+    label:r.label,
+    v:_cv(secId,r.id,'ctdi_vol'),
+    tc:_cv(secId,r.id,'ctdi_vol_tc'),
+    hu:_cv(secId,r.id,'hu_acqua'),
+    iodine:_cv(secId,r.id,'iodine_mgml'),
+  }));
+  if(!pts.some(p=>p.v!=null || p.tc!=null || p.hu!=null || p.iodine!=null)) return '';
+
+  const charts = [];
+  if(pts.some(p=>p.v!=null || p.tc!=null)){
+    charts.push(buildSvgChart({
+      title:'Dual Energy – CTDIvol', type:'bar',
+      labels:pts.map(p=>p.label),
+      datasets:[
+        {label:'CTDIvol mis.', data:pts.map(p=>p.v),  color:'#4d9fff'},
+        {label:'CTDIvol TC',   data:pts.map(p=>p.tc), color:'#f0a500'},
+      ],
+      yLabel:'mGy',
+      forceYZero: true,
+    }));
+  }
+  if(pts.some(p=>p.hu!=null)){
+    charts.push(buildSvgChart({
+      title:'Dual Energy – HU acqua', type:'bar',
+      labels:pts.map(p=>p.label),
+      datasets:[{label:'HU acqua', data:pts.map(p=>p.hu), color:'#34c264'}],
+      yLabel:'HU',
+    }));
+  }
+  if(pts.some(p=>p.iodine!=null)){
+    charts.push(buildSvgChart({
+      title:'Dual Energy – concentrazione iodio', type:'bar',
+      labels:pts.map(p=>p.label),
+      datasets:[{label:'Iodio mis.', data:pts.map(p=>p.iodine), color:'#a78bfa'}],
+      yLabel:'mg/ml',
+      forceYZero: true,
+    }));
+  }
+
+  const table = _deltaTable(pts.map(p=>({label:p.label,v:p.v,tc:p.tc})));
+  return charts.join('') + table;
+}
+
 // ── TAB: Collimazione geometrica (accettazione) ───────────────────────
 function tabRpt_CollimazioneGeom() {
   if(S.controlType!=='accettazione') return '';
@@ -3958,11 +4475,13 @@ function renderReportCharts() {
       {id:'mas', label:'📈 Linearità mAs',     fn:tabRpt_LinearitaMas},
       {id:'kv',  label:'📐 Variazione kVp',    fn:tabRpt_VariazioneKv},
       {id:'cp',  label:'📏 Coll./Pitch/Rot.',  fn:tabRpt_CollimazionePitch},
+      {id:'de',  label:'⚡ Dual Energy',        fn:tabRpt_DualEnergy},
     ];
   } else if(usesSemestraleProtocol(S.controlType)){
     tabsDef=[
       {id:'rip', label:'🔄 Riproducibilità',  fn:tabRpt_Riproducibilita},
       {id:'kv',  label:'📐 Variazione kVp',   fn:tabRpt_VariazioneKv},
+      {id:'de',  label:'⚡ Dual Energy',       fn:tabRpt_DualEnergy},
     ];
   } else if(S.controlType==='accettazione'){
     tabsDef=[
@@ -4046,6 +4565,41 @@ async function init() {
 }
 
 
+// ═══════════════════════════════════════════════════════════════════════
+// AUTO-SAVE su chiusura pagina + Ctrl+S shortcut
+// ═══════════════════════════════════════════════════════════════════════
+window.addEventListener('beforeunload', (e) => {
+  if (!S.control || !S.controlType || !Object.keys(S.cache).length) return;
+  // Tenta salvataggio sincrono con sendBeacon
+  const defs = QC_DEF[S.controlType] || [];
+  defs.forEach(sec => {
+    const rows = getSectionRows(sec);
+    rows.forEach(row => {
+      const key = `${sec.id}_${row.id}`;
+      const cache = S.cache[key];
+      if (!cache || !cache.values || Object.keys(cache.values).length === 0) return;
+      const payload = {
+        control_id: S.control.id,
+        section_id: sec.id,
+        row_id: row.id,
+        values: cache.values,
+        accepted: cache.accepted || false,
+        accepted_at: cache.accepted_at || '',
+      };
+      navigator.sendBeacon('/api/measurements', new Blob(
+        [JSON.stringify(payload)], { type: 'application/json' }
+      ));
+    });
+  });
+});
+
+// Ctrl+S / Cmd+S → salva tutto
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    if (S.control) saveAllData();
+  }
+});
 
 
 init();
